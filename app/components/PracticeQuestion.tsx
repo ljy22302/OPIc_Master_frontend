@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { motion } from "motion/react";
 import { ArrowLeft, Mic, Square, FileText, Lightbulb, Bookmark, Volume2 } from "lucide-react";
@@ -25,9 +25,10 @@ const questions = [
 ];
 
 export function PracticeQuestion() {
+  const recordingLimit = 120;
   const navigate = useNavigate();
   const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(120);
+  const [timeLeft, setTimeLeft] = useState(recordingLimit);
   const [isRecording, setIsRecording] = useState(false);
   const [showQuestion, setShowQuestion] = useState(false);
   const [showHint, setShowHint] = useState(false);
@@ -50,12 +51,8 @@ export function PracticeQuestion() {
       return;
     }
 
-    if (timeLeft > 0) {
-      const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-
-    setIsRecording(false);
+    const timer = setTimeout(() => setTimeLeft((prev) => prev - 1), 1000);
+    return () => clearTimeout(timer);
   }, [isRecording, timeLeft]);
 
   const formatTime = (seconds: number) => {
@@ -64,12 +61,24 @@ export function PracticeQuestion() {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const progress = ((120 - timeLeft) / 120) * 100;
+  const formatRecordingTime = (seconds: number) => {
+    if (seconds >= 0) {
+      return formatTime(seconds);
+    }
+
+    return `+${formatTime(Math.abs(seconds))}`;
+  };
+
+  const recordingProgress = Math.min(
+    ((recordingLimit - Math.max(timeLeft, 0)) / recordingLimit) * 100,
+    100
+  );
+  const isOvertime = timeLeft < 0;
 
   const handleNext = () => {
     if (currentQuestion < questions.length - 1) {
-      setCurrentQuestion(currentQuestion + 1);
-      setTimeLeft(120);
+      setCurrentQuestion((prev) => prev + 1);
+      setTimeLeft(recordingLimit);
       setIsRecording(false);
       setShowQuestion(false);
       setShowHint(false);
@@ -80,16 +89,15 @@ export function PracticeQuestion() {
   };
 
   return (
-    <div className="min-h-screen p-6 bg-gray-50">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="mx-auto max-w-4xl">
         <div className="mb-6 flex items-center justify-between">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate("/practice/setup")}
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex items-center gap-4">
             <span className="text-sm font-semibold text-gray-600">
@@ -98,24 +106,23 @@ export function PracticeQuestion() {
           </div>
         </div>
 
-        {/* Character & Question */}
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           className="mb-6"
         >
           {(difficultyLabel || selectedTypeLabel || selectedTopicLabels.length > 0) && (
-            <div className="mb-4 rounded-3xl bg-white p-4 shadow-sm border border-gray-200">
+            <div className="mb-4 rounded-3xl border border-gray-200 bg-white p-4 shadow-sm">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-wrap gap-2">
                   {difficultyLabel && (
                     <span className="inline-flex items-center rounded-full bg-yellow-100 px-3 py-1 text-sm font-semibold text-yellow-800">
-                      난이도: {difficultyLabel}
+                      Difficulty {difficultyLabel}
                     </span>
                   )}
                   {selectedTypeLabel && (
                     <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-sm font-semibold text-blue-800">
-                      유형: {selectedTypeLabel}
+                      Type: {selectedTypeLabel}
                     </span>
                   )}
                 </div>
@@ -134,9 +141,9 @@ export function PracticeQuestion() {
               </div>
             </div>
           )}
-          <Card className="p-8 bg-yellow-50 border-2 border-yellow-200">
-            {/* Character */}
-            <div className="flex justify-center mb-6">
+
+          <Card className="border-2 border-yellow-200 bg-yellow-50 p-8">
+            <div className="mb-6 flex justify-center">
               <motion.div
                 animate={{
                   scale: isRecording ? [1, 1.05, 1] : 1,
@@ -145,62 +152,59 @@ export function PracticeQuestion() {
                   duration: 1,
                   repeat: isRecording ? Infinity : 0,
                 }}
-                className="w-24 h-24 rounded-full bg-yellow-400 flex items-center justify-center shadow-xl"
+                className="flex h-24 w-24 items-center justify-center rounded-full bg-yellow-400 shadow-xl"
               >
-                <span className="text-4xl">🎤</span>
+                <span className="text-4xl">AI</span>
               </motion.div>
             </div>
 
-            {/* Question Text (Hidden by default) */}
             {showQuestion ? (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="mb-4"
               >
-                <p className="text-xl text-center text-gray-900 font-medium">
+                <p className="text-center text-xl font-medium text-gray-900">
                   {questions[currentQuestion].text}
                 </p>
               </motion.div>
             ) : (
-              <div className="flex justify-center mb-4">
+              <div className="mb-4 flex justify-center">
                 <Button
                   variant="outline"
                   onClick={() => setShowQuestion(true)}
                   className="gap-2"
                 >
-                  <FileText className="w-4 h-4" />
-                  문제 확인
+                  <FileText className="h-4 w-4" />
+                  Show Question
                 </Button>
               </div>
             )}
 
-            {/* Play Question Audio */}
             <div className="flex justify-center">
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => alert("음성 재생 기능 (추후 구현)")}
+                onClick={() => alert("Audio playback will be added later.")}
                 className="gap-2"
               >
-                <Volume2 className="w-4 h-4" />
-                질문 듣기
+                <Volume2 className="h-4 w-4" />
+                Play Question
               </Button>
             </div>
           </Card>
         </motion.div>
 
-        {/* Recording Controls */}
-        <Card className="p-6 mb-6 bg-white">
-          <div className="flex justify-center gap-4 mb-4">
+        <Card className="mb-6 bg-white p-6">
+          <div className="mb-4 flex justify-center gap-4">
             {!isRecording ? (
               <Button
                 size="lg"
                 onClick={() => setIsRecording(true)}
-                className="bg-red-500 hover:bg-red-600 text-white gap-2"
+                className="gap-2 bg-red-500 text-white hover:bg-red-600"
               >
-                <Mic className="w-5 h-5" />
-                녹음 시작
+                <Mic className="h-5 w-5" />
+                Start Recording
               </Button>
             ) : (
               <Button
@@ -209,62 +213,68 @@ export function PracticeQuestion() {
                 variant="outline"
                 className="gap-2 border-red-500 text-red-500"
               >
-                <Square className="w-5 h-5" />
-                녹음 중지
+                <Square className="h-5 w-5" />
+                Stop Recording
               </Button>
             )}
           </div>
 
-          {/* Small Timer */}
-          <div className="flex items-center justify-between gap-4 mb-4 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
-            <span className="font-medium text-gray-600">남은 시간</span>
-            <span className={`font-semibold ${timeLeft < 30 ? "text-red-500" : "text-gray-900"}`}>
-              {formatTime(timeLeft)}
-            </span>
+          <div className="mb-4 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3">
+            <div className="mb-2 flex items-center justify-between gap-4 text-sm text-gray-700">
+              <span className="font-medium text-gray-600">Recording Time</span>
+              <span
+                className={`font-semibold ${
+                  isOvertime || timeLeft < 30 ? "text-red-500" : "text-gray-900"
+                }`}
+              >
+                {formatRecordingTime(timeLeft)}
+              </span>
+            </div>
+            <Progress value={recordingProgress} className="h-2" />
+            <p className={`mt-2 text-xs ${isOvertime ? "text-red-500" : "text-gray-500"}`}>
+              {isOvertime
+                ? `Over time ${formatRecordingTime(timeLeft)}`
+                : `${formatTime(timeLeft)} left out of 2:00`}
+            </p>
           </div>
 
-          {/* Transcript */}
-          <div className="bg-gray-50 rounded-lg p-4 min-h-32">
-            <p className="text-sm text-gray-500 mb-2">음성 → 텍스트 변환 결과</p>
+          <div className="min-h-32 rounded-lg bg-gray-50 p-4">
+            <p className="mb-2 text-sm text-gray-500">Transcript</p>
             <p className="text-gray-700">
-              {transcript || "녹음을 시작하면 여기에 텍스트가 표시됩니다..."}
+              {transcript || "Your transcript will appear here after you start recording."}
             </p>
           </div>
         </Card>
 
-        {/* Action Buttons */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="mb-6 grid grid-cols-3 gap-4">
           <Button
             variant="outline"
             onClick={() => setShowHint(!showHint)}
             className="gap-2"
           >
-            <Lightbulb className="w-4 h-4" />
-            힌트
+            <Lightbulb className="h-4 w-4" />
+            Hint
           </Button>
           <Button variant="outline" className="gap-2">
-            <Bookmark className="w-4 h-4" />
-            문제 저장
+            <Bookmark className="h-4 w-4" />
+            Save Question
           </Button>
           <Button
             onClick={handleNext}
-            className="bg-yellow-400 hover:bg-yellow-500 text-gray-900"
+            className="bg-yellow-400 text-gray-900 hover:bg-yellow-500"
           >
-            {currentQuestion < questions.length - 1 ? "다음 문제" : "결과 보기"}
+            {currentQuestion < questions.length - 1 ? "Next Question" : "See Result"}
           </Button>
         </div>
 
-        {/* Hint Panel */}
         {showHint && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <Card className="p-4 bg-yellow-50 border-yellow-200">
-              <p className="text-sm font-semibold text-gray-900 mb-2">💡 힌트</p>
-              <p className="text-sm text-gray-700">
-                {questions[currentQuestion].hint}
-              </p>
+            <Card className="border-yellow-200 bg-yellow-50 p-4">
+              <p className="mb-2 text-sm font-semibold text-gray-900">Answer Hint</p>
+              <p className="text-sm text-gray-700">{questions[currentQuestion].hint}</p>
             </Card>
           </motion.div>
         )}
