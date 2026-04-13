@@ -98,6 +98,10 @@ export function MockTestQuestion() {
     ((recordingLimit - Math.max(recordingTime, 0)) / recordingLimit) * 100,
     100
   );
+  const overtimeProgress = Math.min(
+    (Math.abs(Math.min(recordingTime, 0)) / recordingLimit) * 100,
+    100
+  );
   const isOvertime = recordingTime < 0;
 
   const handleNext = () => {
@@ -318,12 +322,18 @@ export function MockTestQuestion() {
                 {formatRecordingTime(recordingTime)}
               </span>
             </div>
-            <Progress value={recordingProgress} className="h-2" />
-            <p className={`mt-2 text-xs ${isOvertime ? "text-red-500" : "text-gray-500"}`}>
-              {isOvertime
-                ? `Over time ${formatRecordingTime(recordingTime)}`
-                : `${formatTime(recordingTime)} left out of 2:00`}
-            </p>
+            <div className="relative h-3 overflow-hidden rounded-full bg-gray-200">
+              <div
+                className="h-full bg-yellow-400 transition-[width] ease-linear"
+                style={{ width: `${recordingProgress}%`, transitionDuration: "1000ms" }}
+              />
+              {isOvertime && (
+                <div
+                  className="absolute inset-y-0 left-0 bg-red-500 transition-[width] ease-linear"
+                  style={{ width: `${overtimeProgress}%`, transitionDuration: "1000ms" }}
+                />
+              )}
+            </div>
           </div>
 
           <div className="rounded-lg bg-gray-50 p-4 min-h-32">
