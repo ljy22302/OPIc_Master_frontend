@@ -148,12 +148,13 @@ export function PracticeSetup() {
         </motion.div>
 
         {/* Topic Selection */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="mb-8"
-        >
+        {selectedType === "topics" && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="mb-8"
+          >
           <h2 className="text-xl font-semibold text-gray-900 mb-4">
             3. 주제 선택 <span className="text-sm text-gray-500">(복수 선택 가능)</span>
           </h2>
@@ -194,7 +195,8 @@ export function PracticeSetup() {
               );
             })}
           </div>
-        </motion.div>
+          </motion.div>
+        )}
 
         {/* Start Button */}
         {!selectedType && (
