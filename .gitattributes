@@ -1,0 +1,5 @@
+data.json -linguist-generated
+
+*.csv -linguist-generated
+
+.package-lock.json -linguist-generated
