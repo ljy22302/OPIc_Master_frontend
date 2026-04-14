@@ -279,10 +279,16 @@ export function PracticeQuestion() {
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                 >
-                  <Card className="mt-4 border-yellow-200 bg-yellow-50 p-4">
-                    <p className="mb-2 text-sm font-semibold text-gray-900">Answer Hint</p>
-                    <p className="text-sm text-gray-700">{questions[currentQuestion].hint}</p>
-                  </Card>
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-4 rounded-2xl border border-gray-200 bg-white p-5"
+                  >
+                    <p className="mb-2 text-base font-semibold text-gray-900">Answer Hint</p>
+                    <p className="text-base leading-relaxed text-gray-700">
+                      {questions[currentQuestion].hint}
+                    </p>
+                  </motion.div>
                 </motion.div>
               )}
             </div>
