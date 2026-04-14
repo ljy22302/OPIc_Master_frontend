@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "motion/react";
 import { Button } from "./ui/button";
@@ -27,6 +27,12 @@ export function Signup() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [phoneCode, setPhoneCode] = useState("");
+  const [sentPhoneCode, setSentPhoneCode] = useState("");
+  const [phoneCodeSent, setPhoneCodeSent] = useState(false);
+  const [phoneVerified, setPhoneVerified] = useState(false);
+  const [phoneNotice, setPhoneNotice] = useState("");
+  const [phoneCodeFeedback, setPhoneCodeFeedback] = useState("");
   const [emailLocal, setEmailLocal] = useState("");
   const [emailDomain, setEmailDomain] = useState("naver.com");
   const [customEmailDomain, setCustomEmailDomain] = useState("");
@@ -73,13 +79,13 @@ export function Signup() {
       return;
     }
 
-    if (!emailLocal || !resolvedDomain) {
-      setError("이메일 주소를 입력해주세요.");
+    if (!phoneCodeSent) {
+      setError("인증번호 발송을 먼저 해주세요.");
       return;
     }
 
-    if (!birthYear || !birthMonth || !birthDay) {
-      setError("생년월일을 모두 선택해주세요.");
+    if (!phoneVerified) {
+      setError("전화번호 인증을 완료해주세요.");
       return;
     }
 
@@ -96,7 +102,7 @@ export function Signup() {
         >
           <div className="mb-8 text-center">
             <h1 className="text-4xl font-bold text-gray-900">회원가입</h1>
-            <p className="mt-3 text-gray-600">회원이 되어 다양한 혜택을 경험해 보세요!</p>
+            <p className="mt-3 text-gray-600">회원 정보를 입력해서 다양한 OPIc 연습 경험을 만들어보세요.</p>
           </div>
 
           <Card className="border-2 border-yellow-200 bg-white p-6 shadow-xl md:p-8">
@@ -123,7 +129,7 @@ export function Signup() {
             <div className="space-y-5">
               <div>
                 <Label htmlFor="username" className="mb-2 block text-sm font-semibold text-gray-900">
-                  아이디
+                  <span className="text-red-500">*</span> 아이디
                   <span className="ml-2 text-xs font-medium text-red-500">사용할 수 있는 아이디입니다</span>
                 </Label>
                 <div className="flex gap-3">
@@ -157,9 +163,9 @@ export function Signup() {
 
               <div>
                 <Label htmlFor="password" className="mb-2 block text-sm font-semibold text-gray-900">
-                  비밀번호
+                  <span className="text-red-500">*</span> 비밀번호
                   <span className="ml-2 text-xs font-medium text-red-500">
-                    20자 이내의 비밀번호를 입력해주세요
+                    8~20자의 비밀번호를 입력해주세요
                   </span>
                 </Label>
                 <Input
@@ -167,15 +173,15 @@ export function Signup() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="비밀번호 입력 (문자, 숫자, 특수문자 포함 8~20자)"
+                  placeholder="비밀번호 입력 (8~20자)"
                 />
               </div>
 
               <div>
                 <Label htmlFor="confirmPassword" className="mb-2 block text-sm font-semibold text-gray-900">
-                  비밀번호 확인
+                  <span className="text-red-500">*</span> 비밀번호 확인
                   <span className="ml-2 text-xs font-medium text-red-500">
-                    비밀번호를 확인해 주세요
+                    비밀번호가 일치하는지 확인해주세요
                   </span>
                 </Label>
                 <Input
@@ -189,35 +195,123 @@ export function Signup() {
 
               <div>
                 <Label htmlFor="name" className="mb-2 block text-sm font-semibold text-gray-900">
-                  이름
+                  <span className="text-red-500">*</span> 이름
                 </Label>
                 <Input
                   id="name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="이름을 입력해주세요"
+                  placeholder="이름 입력"
                 />
               </div>
 
               <div>
                 <Label htmlFor="phone" className="mb-2 block text-sm font-semibold text-gray-900">
-                  전화번호
+                  <span className="text-red-500">*</span> 전화번호
                 </Label>
-                <Input
-                  id="phone"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="휴대폰 번호 입력 ('-' 제외 11자리 입력)"
-                />
+                <div className="flex gap-3">
+                  <Input
+                    id="phone"
+                    value={phone}
+                    onChange={(e) => {
+                      setPhone(e.target.value);
+                      setPhoneCode("");
+                      setSentPhoneCode("");
+                      setPhoneCodeSent(false);
+                      setPhoneVerified(false);
+                      setPhoneNotice("");
+                      setPhoneCodeFeedback("");
+                    }}
+                    placeholder="전화번호 입력 ('-' 제외 11자리 입력)"
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    className="h-9 min-w-28 bg-yellow-400 text-gray-900 hover:bg-yellow-500"
+                    onClick={() => {
+                      if (!phone || phone.length < 10) {
+                        setError("전화번호를 정확히 입력해주세요.");
+                        return;
+                      }
+                      const code = String(Math.floor(100000 + Math.random() * 900000));
+                      setError("");
+                      setSentPhoneCode(code);
+                      setPhoneCodeSent(true);
+                      setPhoneVerified(false);
+                      setPhoneNotice("인증번호가 발송되었습니다.");
+                      setPhoneCodeFeedback("");
+                    }}
+                  >
+                    인증번호 발송
+                  </Button>
+                </div>
+                {phoneNotice && (
+                  <p className="mt-2 rounded-lg border border-yellow-200 bg-yellow-50 px-3 py-2 text-sm text-yellow-800">
+                    {phoneNotice}
+                  </p>
+                )}
+
+                {phoneCodeSent && (
+                  <>
+                    <div className="mt-3 flex gap-3">
+                      <Input
+                        value={phoneCode}
+                        onChange={(e) => {
+                          setPhoneCode(e.target.value);
+                          setPhoneVerified(false);
+                          setPhoneCodeFeedback("");
+                        }}
+                        placeholder="인증번호 입력"
+                        className="flex-1"
+                      />
+                      <Button
+                        type="button"
+                        className="h-9 min-w-28 bg-yellow-400 text-gray-900 hover:bg-yellow-500"
+                        onClick={() => {
+                          if (!phoneCode) {
+                            setPhoneVerified(false);
+                            setPhoneCodeFeedback("인증번호를 확인해주세요");
+                            return;
+                          }
+                          if (phoneCode !== sentPhoneCode) {
+                            setPhoneVerified(false);
+                            setPhoneCodeFeedback("인증번호를 확인해주세요");
+                            return;
+                          }
+
+                          setError("");
+                          setPhoneVerified(true);
+                          setPhoneCodeFeedback("인증번호 확인");
+                        }}
+                      >
+                        인증번호 확인
+                      </Button>
+                    </div>
+                    {phoneCodeFeedback && (
+                      <p
+                        className={`mt-2 rounded-lg border px-3 py-2 text-sm ${
+                          phoneCodeFeedback === "인증번호 확인"
+                            ? "border-yellow-200 bg-yellow-50 text-yellow-800"
+                            : "border-red-200 bg-red-50 text-red-600"
+                        }`}
+                      >
+                        {phoneCodeFeedback}
+                      </p>
+                    )}
+                  </>
+                )}
               </div>
 
               <div>
-                <Label className="mb-2 block text-sm font-semibold text-gray-900">이메일 주소</Label>
+                <Label className="mb-2 block text-sm font-semibold text-gray-900">
+                  이메일 주소
+                  <span className="ml-2 text-xs font-medium text-gray-500">선택</span>
+                </Label>
                 <div className="flex items-center gap-2">
                   <Input
                     value={emailLocal}
                     onChange={(e) => setEmailLocal(e.target.value)}
-                    placeholder="이메일 아이디"
+                    placeholder="이메일 주소"
                     className="min-w-0 flex-1"
                   />
                   <span className="text-sm font-semibold text-gray-500">@</span>
@@ -225,7 +319,7 @@ export function Signup() {
                     <Input
                       value={customEmailDomain}
                       onChange={(e) => setCustomEmailDomain(e.target.value)}
-                      placeholder="도메인 입력"
+                      placeholder="직접 입력"
                       className="min-w-0 flex-1"
                     />
                   ) : (
@@ -246,7 +340,10 @@ export function Signup() {
               </div>
 
               <div>
-                <Label className="mb-2 block text-sm font-semibold text-gray-900">생년월일</Label>
+                <Label className="mb-2 block text-sm font-semibold text-gray-900">
+                  생년월일
+                  <span className="ml-2 text-xs font-medium text-gray-500">선택</span>
+                </Label>
                 <div className="grid grid-cols-3 gap-3">
                   <Select value={birthYear} onValueChange={setBirthYear}>
                     <SelectTrigger className="bg-white">
@@ -285,6 +382,7 @@ export function Signup() {
                     </SelectContent>
                   </Select>
                 </div>
+                <p className="mt-2 text-xs font-medium text-red-500">*은 필수입니다</p>
               </div>
             </div>
 
