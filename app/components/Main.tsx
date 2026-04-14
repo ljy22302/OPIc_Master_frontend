@@ -1,8 +1,16 @@
+import { useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "motion/react";
 import { BookOpen, ClipboardList, FolderOpen, BarChart3, HelpCircle, Mic2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "./ui/dialog";
 
 const menuItems = [
   {
@@ -33,6 +41,7 @@ const menuItems = [
 
 export function Main() {
   const navigate = useNavigate();
+  const [helpOpen, setHelpOpen] = useState(false);
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -53,12 +62,44 @@ export function Main() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => alert("앱 사용 안내:\n\n1. 연습 모드: 주제별로 3개 문제 연습\n2. 모의고사 모드: 15개 문제 실전 테스트\n3. 추가 자료: 필수 표현 학습\n4. 기록 확인: 학습 통계 및 복습")}
+            onClick={() => setHelpOpen(true)}
           >
             <HelpCircle className="w-5 h-5" />
           </Button>
         </div>
       </header>
+
+      <Dialog open={helpOpen} onOpenChange={setHelpOpen}>
+        <DialogContent className="max-w-lg border-2 border-yellow-200 bg-white">
+          <DialogHeader className="text-left">
+            <DialogTitle className="text-2xl font-bold text-gray-900">
+              안내사항
+            </DialogTitle>
+            <DialogDescription className="text-gray-600">
+              앱 사용 방법을 간단히 확인해보세요.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 text-sm text-gray-700">
+            <div className="rounded-lg bg-yellow-50 p-4">
+              <p className="font-semibold text-gray-900">1. 연습 모드</p>
+              <p className="mt-1">주제별로 맞춤 문제를 연습할 수 있습니다.</p>
+            </div>
+            <div className="rounded-lg bg-yellow-50 p-4">
+              <p className="font-semibold text-gray-900">2. 모의고사 모드</p>
+              <p className="mt-1">실전처럼 15개 문제를 풀어볼 수 있습니다.</p>
+            </div>
+            <div className="rounded-lg bg-yellow-50 p-4">
+              <p className="font-semibold text-gray-900">3. 추가 자료</p>
+              <p className="mt-1">필수 표현과 유용한 문장을 학습합니다.</p>
+            </div>
+            <div className="rounded-lg bg-yellow-50 p-4">
+              <p className="font-semibold text-gray-900">4. 기록 확인</p>
+              <p className="mt-1">학습 기록과 통계를 확인할 수 있습니다.</p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Main Content */}
       <main className="flex-1 p-6">
