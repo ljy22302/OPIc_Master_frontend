@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { motion } from "motion/react";
 import { ArrowLeft, Bookmark, FileText, Lightbulb, Mic, Volume2 } from "lucide-react";
@@ -61,7 +61,7 @@ export function PracticeQuestion() {
   const navigate = useNavigate();
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [timeLeft, setTimeLeft] = useState(recordingLimit);
-  const [isRecording, setIsRecording] = useState(false);
+  const [recordingState, setRecordingState] = useState<"idle" | "recording" | "completed">("idle");
   const [showQuestion, setShowQuestion] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [transcript] = useState("");
@@ -83,13 +83,13 @@ export function PracticeQuestion() {
     }) ?? {};
 
   useEffect(() => {
-    if (!isRecording) {
+    if (recordingState !== "recording") {
       return;
     }
 
     const timer = setTimeout(() => setTimeLeft((prev) => prev - 1), 1000);
     return () => clearTimeout(timer);
-  }, [isRecording, timeLeft]);
+  }, [recordingState, timeLeft]);
 
   useEffect(() => {
     if (!transitionPhase) {
@@ -106,7 +106,7 @@ export function PracticeQuestion() {
         if (currentQuestion < questions.length - 1) {
           setCurrentQuestion((prev) => prev + 1);
           setTimeLeft(recordingLimit);
-          setIsRecording(false);
+          setRecordingState("idle");
           setShowQuestion(false);
           setShowHint(false);
           setPlayCount(0);
@@ -299,12 +299,21 @@ export function PracticeQuestion() {
           <div className="mb-4 flex justify-center">
             <Button
               size="lg"
-              onClick={() => setIsRecording(true)}
-              disabled={isRecording}
+              onClick={() => {
+                if (recordingState === "idle") {
+                  setRecordingState("recording");
+                  return;
+                }
+
+                if (recordingState === "recording") {
+                  setRecordingState("completed");
+                }
+              }}
+              disabled={recordingState === "completed"}
               className="gap-2 bg-red-500 text-white hover:bg-red-600 disabled:opacity-70"
             >
               <Mic className="h-5 w-5" />
-              {isRecording ? "녹음 중" : "Start Recording"}
+              {recordingState === "recording" ? "답변 완료" : "녹음하기"}
             </Button>
           </div>
 

@@ -246,7 +246,7 @@ export function Signup() {
                   </Button>
                 </div>
                 {phoneNotice && (
-                  <p className="mt-2 rounded-lg border border-yellow-200 bg-yellow-50 px-3 py-2 text-sm text-yellow-800">
+                  <p className="mt-2 text-sm text-red-500">
                     {phoneNotice}
                   </p>
                 )}
@@ -289,11 +289,7 @@ export function Signup() {
                     </div>
                     {phoneCodeFeedback && (
                       <p
-                        className={`mt-2 rounded-lg border px-3 py-2 text-sm ${
-                          phoneCodeFeedback === "인증번호 확인"
-                            ? "border-yellow-200 bg-yellow-50 text-yellow-800"
-                            : "border-red-200 bg-red-50 text-red-600"
-                        }`}
+                        className="mt-2 text-sm text-red-500"
                       >
                         {phoneCodeFeedback}
                       </p>
