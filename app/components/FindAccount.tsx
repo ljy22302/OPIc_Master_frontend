@@ -5,42 +5,63 @@ import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
+
+type AccountType = "일반" | "학생" | "기업";
+
+const accountTypes: AccountType[] = ["일반", "학생", "기업"];
+const hintOptions = [
+  "질문을 선택하세요",
+  "좋아하는 계절",
+  "첫 반려동물 이름",
+  "어머니 성함",
+  "가장 기억에 남는 장소",
+];
+
+function AccountTypePicker({
+  value,
+  onChange,
+}: {
+  value: AccountType;
+  onChange: (value: AccountType) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-4">
+      {accountTypes.map((type) => {
+        const active = value === type;
+        return (
+          <button
+            key={type}
+            type="button"
+            onClick={() => onChange(type)}
+            className="flex items-center gap-2 text-sm font-medium text-gray-800 transition-colors"
+          >
+            <span
+              className={`flex h-5 w-5 items-center justify-center rounded-full border ${
+                active ? "border-sky-500 bg-sky-500" : "border-gray-300 bg-white"
+              }`}
+            >
+              <span className={`h-2.5 w-2.5 rounded-full ${active ? "bg-white" : "bg-transparent"}`} />
+            </span>
+            {type}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 function FindIdCard() {
-  const [phone, setPhone] = useState("");
-  const [authCode, setAuthCode] = useState("");
-  const [sentCode, setSentCode] = useState("");
-  const [showAuthInput, setShowAuthInput] = useState(false);
-  const [authStatus, setAuthStatus] = useState("");
+  const [type, setType] = useState<AccountType>("일반");
   const [name, setName] = useState("");
-
-  const handleSendCode = () => {
-    if (!phone) {
-      setAuthStatus("전화번호를 입력해주세요.");
-      setShowAuthInput(false);
-      setSentCode("");
-      return;
-    }
-
-    setSentCode("123456");
-    setShowAuthInput(true);
-    setAuthCode("");
-    setAuthStatus("인증번호가 발송되었습니다.");
-  };
-
-  const handleVerifyCode = () => {
-    if (!authCode) {
-      setAuthStatus("인증번호를 입력해주세요.");
-      return;
-    }
-
-    if (authCode === sentCode) {
-      setAuthStatus("인증번호 확인되었습니다.");
-      return;
-    }
-
-    setAuthStatus("인증번호가 올바르지 않습니다.");
-  };
+  const [email, setEmail] = useState("");
+  const [result, setResult] = useState("");
 
   return (
     <Card className="h-full border-2 border-yellow-200 bg-white p-6 shadow-lg">
@@ -49,6 +70,10 @@ function FindIdCard() {
           ?
         </div>
         <h2 className="text-2xl font-bold text-gray-900">아이디 찾기</h2>
+      </div>
+
+      <div className="mb-6">
+        <AccountTypePicker value={type} onChange={setType} />
       </div>
 
       <div className="space-y-4">
@@ -63,68 +88,38 @@ function FindIdCard() {
             placeholder="이름을 입력해주세요"
           />
         </div>
-
         <div>
-          <Label htmlFor="find-id-phone" className="mb-2 block text-sm font-semibold text-sky-800">
-            전화번호
+          <Label htmlFor="find-id-email" className="mb-2 block text-sm font-semibold text-sky-800">
+            이메일
           </Label>
-          <div className="flex gap-2">
-            <Input
-              id="find-id-phone"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="전화번호를 입력해주세요"
-              className="flex-1"
-            />
-            <Button
-              type="button"
-              className="shrink-0 bg-yellow-400 text-gray-900 hover:bg-yellow-500"
-              onClick={handleSendCode}
-            >
-              인증번호 발송
-            </Button>
-          </div>
+          <Input
+            id="find-id-email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="이메일을 입력해주세요"
+          />
         </div>
-
-        {showAuthInput && (
-          <div>
-            <Label htmlFor="find-id-auth" className="mb-2 block text-sm font-semibold text-sky-800">
-              인증번호
-            </Label>
-            <div className="flex gap-2">
-              <Input
-                id="find-id-auth"
-                value={authCode}
-                onChange={(e) => setAuthCode(e.target.value)}
-                placeholder="인증번호를 입력해주세요"
-                className="flex-1"
-              />
-              <Button
-                type="button"
-                className="shrink-0 bg-yellow-400 text-gray-900 hover:bg-yellow-500"
-                onClick={handleVerifyCode}
-              >
-                인증번호 확인
-              </Button>
-            </div>
-            {authStatus && <p className="mt-2 text-sm font-medium text-red-500">{authStatus}</p>}
-          </div>
-        )}
       </div>
+
+      {result && (
+        <div className="mt-5 rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
+          {result}
+        </div>
+      )}
 
       <div className="mt-6">
         <Button
           type="button"
           className="w-full bg-yellow-400 text-gray-900 hover:bg-yellow-500"
           onClick={() => {
-            if (!name || !phone || !authCode) {
-              setAuthStatus("모든 정보를 입력해주세요.");
+            if (!name || !email) {
+              setResult("");
               return;
             }
-            setAuthStatus("인증번호 확인되었습니다.");
+            setResult(`입력하신 ${type} 계정 정보로 아이디를 찾는 화면입니다.`);
           }}
         >
-          아이디찾기
+          아이디 찾기
         </Button>
       </div>
     </Card>
@@ -132,42 +127,12 @@ function FindIdCard() {
 }
 
 function FindPasswordCard() {
+  const [type, setType] = useState<AccountType>("일반");
   const [accountId, setAccountId] = useState("");
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [authCode, setAuthCode] = useState("");
-  const [sentCode, setSentCode] = useState("");
-  const [showAuthInput, setShowAuthInput] = useState(false);
-  const [authStatus, setAuthStatus] = useState("");
-
-  const handleSendCode = () => {
-    if (!phone) {
-      setAuthStatus("전화번호를 입력해주세요.");
-      setShowAuthInput(false);
-      setSentCode("");
-      return;
-    }
-
-    setSentCode("123456");
-    setShowAuthInput(true);
-    setAuthCode("");
-    setAuthStatus("인증번호가 발송되었습니다.");
-  };
-
-  const handleVerifyCode = () => {
-    if (!authCode) {
-      setAuthStatus("인증번호를 입력해주세요.");
-      return;
-    }
-
-    if (authCode === sentCode) {
-      setAuthStatus("인증번호 확인되었습니다.");
-      return;
-    }
-
-    setAuthStatus("인증번호가 올바르지 않습니다.");
-  };
+  const [hint, setHint] = useState("");
+  const [answer, setAnswer] = useState("");
+  const [result, setResult] = useState("");
 
   return (
     <Card className="h-full border-2 border-yellow-200 bg-white p-6 shadow-lg">
@@ -176,6 +141,10 @@ function FindPasswordCard() {
           ?
         </div>
         <h2 className="text-2xl font-bold text-gray-900">비밀번호 찾기</h2>
+      </div>
+
+      <div className="mb-6">
+        <AccountTypePicker value={type} onChange={setType} />
       </div>
 
       <div className="space-y-4">
@@ -190,7 +159,6 @@ function FindPasswordCard() {
             placeholder="아이디를 입력해주세요"
           />
         </div>
-
         <div>
           <Label htmlFor="find-pw-name" className="mb-2 block text-sm font-semibold text-sky-800">
             이름
@@ -202,80 +170,55 @@ function FindPasswordCard() {
             placeholder="이름을 입력해주세요"
           />
         </div>
-
         <div>
-          <Label htmlFor="find-pw-email" className="mb-2 block text-sm font-semibold text-sky-800">
-            이메일
+          <Label htmlFor="find-pw-hint" className="mb-2 block text-sm font-semibold text-sky-800">
+            본인 확인 질문
+          </Label>
+          <Select value={hint} onValueChange={setHint}>
+            <SelectTrigger id="find-pw-hint" className="bg-white">
+              <SelectValue placeholder="질문을 선택해주세요" />
+            </SelectTrigger>
+            <SelectContent className="bg-white">
+              {hintOptions.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label htmlFor="find-pw-answer" className="mb-2 block text-sm font-semibold text-sky-800">
+            답변
           </Label>
           <Input
-            id="find-pw-email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="이메일을 입력해주세요"
+            id="find-pw-answer"
+            value={answer}
+            onChange={(e) => setAnswer(e.target.value)}
+            placeholder="답변을 입력해주세요"
           />
         </div>
-
-        <div>
-          <Label htmlFor="find-pw-phone" className="mb-2 block text-sm font-semibold text-sky-800">
-            전화번호
-          </Label>
-          <div className="flex gap-2">
-            <Input
-              id="find-pw-phone"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="전화번호를 입력해주세요"
-              className="flex-1"
-            />
-            <Button
-              type="button"
-              className="shrink-0 bg-yellow-400 text-gray-900 hover:bg-yellow-500"
-              onClick={handleSendCode}
-            >
-              인증번호 발송
-            </Button>
-          </div>
-        </div>
-
-        {showAuthInput && (
-          <div>
-            <Label htmlFor="find-pw-auth" className="mb-2 block text-sm font-semibold text-sky-800">
-              인증번호
-            </Label>
-            <div className="flex gap-2">
-              <Input
-                id="find-pw-auth"
-                value={authCode}
-                onChange={(e) => setAuthCode(e.target.value)}
-                placeholder="인증번호를 입력해주세요"
-                className="flex-1"
-              />
-              <Button
-                type="button"
-                className="shrink-0 bg-yellow-400 text-gray-900 hover:bg-yellow-500"
-                onClick={handleVerifyCode}
-              >
-                인증번호 확인
-              </Button>
-            </div>
-            {authStatus && <p className="mt-2 text-sm font-medium text-red-500">{authStatus}</p>}
-          </div>
-        )}
       </div>
+
+      {result && (
+        <div className="mt-5 rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
+          {result}
+        </div>
+      )}
 
       <div className="mt-6">
         <Button
           type="button"
           className="w-full bg-yellow-400 text-gray-900 hover:bg-yellow-500"
           onClick={() => {
-            if (!accountId || !name || !email || !phone || !authCode) {
-              setAuthStatus("모든 정보를 입력해주세요.");
+            if (!accountId || !name || !hint || !answer) {
+              setResult("");
               return;
             }
-            setAuthStatus("인증번호 확인되었습니다.");
+            setResult(`입력하신 ${type} 계정 정보로 비밀번호를 찾는 화면입니다.`);
           }}
         >
-          비밀번호찾기
+          비밀번호 찾기
         </Button>
       </div>
     </Card>
@@ -295,7 +238,7 @@ export function FindAccount() {
         >
           <div className="mb-10 text-center">
             <h1 className="text-4xl font-bold text-gray-900">OPIC</h1>
-            <p className="mt-3 text-lg text-gray-600">영어 말하기 실력 향상</p>
+            <p className="mt-3 text-lg text-gray-600">영어 말하기 실력 향상 연습</p>
           </div>
 
           <div className="mb-6 flex justify-start">

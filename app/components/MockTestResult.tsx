@@ -1,6 +1,6 @@
-import { useNavigate } from "react-router";
+﻿import { useNavigate } from "react-router";
 import { motion } from "motion/react";
-import { Trophy, TrendingUp, BookOpen, Home, RotateCcw, Download } from "lucide-react";
+import { Trophy, TrendingUp, Home, Download } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Progress } from "./ui/progress";
@@ -127,7 +127,7 @@ export function MockTestResult() {
           className="mb-8"
         >
           <h3 className="text-2xl font-bold text-gray-900 mb-4">유형별 점수</h3>
-          <div className="grid md:grid-cols-4 gap-4">
+          <div className="grid gap-4 md:grid-cols-2">
             {mockResult.categoryScores.map((item) => (
               <Card key={item.category} className="p-6 text-center bg-white">
                 <p className="text-sm text-gray-600 mb-2">{item.category}</p>
@@ -187,7 +187,7 @@ export function MockTestResult() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
-          className="grid md:grid-cols-4 gap-4"
+          className="grid gap-4 md:grid-cols-2"
         >
           <Button
             variant="outline"
@@ -196,22 +196,6 @@ export function MockTestResult() {
           >
             <Download className="w-4 h-4" />
             결과 저장
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => navigate("/mocktest/setup")}
-            className="gap-2"
-          >
-            <RotateCcw className="w-4 h-4" />
-            재시험
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => navigate("/resources")}
-            className="gap-2"
-          >
-            <BookOpen className="w-4 h-4" />
-            학습 자료
           </Button>
           <Button
             onClick={() => navigate("/main")}

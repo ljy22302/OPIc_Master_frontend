@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { motion } from "motion/react";
 import { ArrowLeft, Bookmark, FileText, Lightbulb, Mic, Volume2 } from "lucide-react";
@@ -61,7 +61,7 @@ export function PracticeQuestion() {
   const navigate = useNavigate();
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [timeLeft, setTimeLeft] = useState(recordingLimit);
-  const [recordingState, setRecordingState] = useState<"idle" | "recording" | "completed">("idle");
+  const [isRecording, setIsRecording] = useState(false);
   const [showQuestion, setShowQuestion] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [transcript] = useState("");
@@ -83,13 +83,13 @@ export function PracticeQuestion() {
     }) ?? {};
 
   useEffect(() => {
-    if (recordingState !== "recording") {
+    if (!isRecording) {
       return;
     }
 
     const timer = setTimeout(() => setTimeLeft((prev) => prev - 1), 1000);
     return () => clearTimeout(timer);
-  }, [recordingState, timeLeft]);
+  }, [isRecording, timeLeft]);
 
   useEffect(() => {
     if (!transitionPhase) {
@@ -106,7 +106,7 @@ export function PracticeQuestion() {
         if (currentQuestion < questions.length - 1) {
           setCurrentQuestion((prev) => prev + 1);
           setTimeLeft(recordingLimit);
-          setRecordingState("idle");
+          setIsRecording(false);
           setShowQuestion(false);
           setShowHint(false);
           setPlayCount(0);
@@ -279,16 +279,10 @@ export function PracticeQuestion() {
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                 >
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mt-4 rounded-2xl border border-gray-200 bg-white p-5"
-                  >
-                    <p className="mb-2 text-base font-semibold text-gray-900">Answer Hint</p>
-                    <p className="text-base leading-relaxed text-gray-700">
-                      {questions[currentQuestion].hint}
-                    </p>
-                  </motion.div>
+                  <Card className="mt-4 border-yellow-200 bg-yellow-50 p-4">
+                    <p className="mb-2 text-sm font-semibold text-gray-900">Answer Hint</p>
+                    <p className="text-sm text-gray-700">{questions[currentQuestion].hint}</p>
+                  </Card>
                 </motion.div>
               )}
             </div>
@@ -299,21 +293,12 @@ export function PracticeQuestion() {
           <div className="mb-4 flex justify-center">
             <Button
               size="lg"
-              onClick={() => {
-                if (recordingState === "idle") {
-                  setRecordingState("recording");
-                  return;
-                }
-
-                if (recordingState === "recording") {
-                  setRecordingState("completed");
-                }
-              }}
-              disabled={recordingState === "completed"}
+              onClick={() => setIsRecording(true)}
+              disabled={isRecording}
               className="gap-2 bg-red-500 text-white hover:bg-red-600 disabled:opacity-70"
             >
               <Mic className="h-5 w-5" />
-              {recordingState === "recording" ? "답변 완료" : "녹음하기"}
+              {isRecording ? "녹음 중" : "Start Recording"}
             </Button>
           </div>
 

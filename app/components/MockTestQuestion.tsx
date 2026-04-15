@@ -5,6 +5,7 @@ import { ArrowLeft, Mic, Square, Volume2, AlertCircle } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Progress } from "./ui/progress";
+import ossCharacter from "./OSS_character.png";
 
 const mockQuestions = [
   { id: 1, type: "Self-Intro", text: "Let's start the interview now. Tell me about yourself." },
@@ -49,27 +50,22 @@ export function MockTestQuestion() {
   }) ?? {};
 
   const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [questionTime, setQuestionTime] = useState(120);
   const [totalTime, setTotalTime] = useState(2400);
-  const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(recordingLimit);
   const [transcript, setTranscript] = useState("");
+  const [playCount, setPlayCount] = useState(0);
+  const [recordingState, setRecordingState] = useState<"idle" | "recording" | "completed">(
+    "idle"
+  );
 
   useEffect(() => {
-    if (!isRecording) {
+    if (recordingState !== "recording") {
       return;
     }
 
     const timer = setTimeout(() => setRecordingTime((prev) => prev - 1), 1000);
     return () => clearTimeout(timer);
-  }, [isRecording, recordingTime]);
-
-  useEffect(() => {
-    if (questionTime > 0) {
-      const timer = setTimeout(() => setQuestionTime((prev) => prev - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [questionTime]);
+  }, [recordingState, recordingTime]);
 
   useEffect(() => {
     if (totalTime > 0) {
@@ -92,7 +88,6 @@ export function MockTestQuestion() {
     return `+${formatTime(Math.abs(seconds))}`;
   };
 
-  const questionProgress = ((120 - questionTime) / 120) * 100;
   const totalProgress = ((currentQuestion + 1) / mockQuestions.length) * 100;
   const recordingProgress = Math.min(
     ((recordingLimit - Math.max(recordingTime, 0)) / recordingLimit) * 100,
@@ -103,14 +98,15 @@ export function MockTestQuestion() {
     100
   );
   const isOvertime = recordingTime < 0;
+  const progressSteps = Array.from({ length: mockQuestions.length }, (_, index) => index + 1);
 
   const handleNext = () => {
     if (currentQuestion < mockQuestions.length - 1) {
       setCurrentQuestion((prev) => prev + 1);
-      setQuestionTime(120);
       setRecordingTime(recordingLimit);
       setTranscript("");
-      setIsRecording(false);
+      setPlayCount(0);
+      setRecordingState("idle");
     } else {
       navigate("/mocktest/result");
     }
@@ -248,67 +244,83 @@ export function MockTestQuestion() {
           className="mb-6"
         >
           <Card className="border-2 border-yellow-200 bg-yellow-50 p-8">
-            <div className="mb-6 flex justify-center">
-              <motion.div
-                animate={{
-                  scale: isRecording ? [1, 1.05, 1] : 1,
-                }}
-                transition={{
-                  duration: 1,
-                  repeat: isRecording ? Infinity : 0,
-                }}
-                className="flex h-24 w-24 items-center justify-center rounded-full bg-yellow-400 shadow-xl"
-              >
-                <span className="text-4xl">AI</span>
-              </motion.div>
-            </div>
+            <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+              <div className="flex flex-col items-center">
+                <div className="mb-4 w-full max-w-[360px] rounded-[32px] border border-yellow-200 bg-white p-2 shadow-sm">
+                  <div className="flex h-[300px] w-full items-center justify-center overflow-hidden rounded-[28px] bg-white">
+                    <img
+                      src={ossCharacter}
+                      alt="Practice question"
+                      className="h-full w-full object-contain"
+                    />
+                  </div>
+                </div>
 
-            <div className="mb-4">
-              <p className="text-center text-xl font-medium text-gray-900">{currentQ.text}</p>
-            </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    if (playCount < 2) {
+                      setPlayCount((prev) => prev + 1);
+                    }
+                  }}
+                  disabled={playCount >= 2}
+                  className="gap-2 text-gray-700 disabled:opacity-40"
+                >
+                  <Volume2 className="h-4 w-4" />
+                  Play Question
+                </Button>
+                <p className="mt-1 text-center text-xs text-gray-500">2번 듣기 가능</p>
+              </div>
 
-            <div className="mb-4">
-              <p className="mb-2 text-center text-sm text-gray-500">Question timer</p>
-              <Progress value={questionProgress} className="h-2" />
-              <p className="mt-2 text-center text-sm font-semibold text-gray-700">{formatTime(questionTime)}</p>
-            </div>
-
-            <div className="flex justify-center">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => alert("Audio playback will be added later.")}
-                className="gap-2"
-              >
-                <Volume2 className="h-4 w-4" />
-                Play Question
-              </Button>
+              <div className="flex flex-col justify-center">
+                <p className="mb-3 text-sm font-semibold text-gray-700">진행 상태</p>
+                <div className="grid grid-cols-5 gap-2 sm:grid-cols-10 lg:grid-cols-10">
+                  {progressSteps.map((step) => {
+                    const isCurrent = step === currentQuestion + 1;
+                    return (
+                      <div
+                        key={step}
+                        className={`flex h-11 items-center justify-center rounded-sm border text-sm font-semibold ${
+                          isCurrent
+                            ? "border-black bg-black text-white"
+                            : "border-gray-200 bg-gray-200 text-white"
+                        }`}
+                      >
+                        {step}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </Card>
         </motion.div>
 
         <Card className="mb-6 bg-white p-6">
           <div className="mb-4 flex justify-center gap-4">
-            {!isRecording ? (
-              <Button
-                size="lg"
-                onClick={() => setIsRecording(true)}
-                className="gap-2 bg-red-500 text-white hover:bg-red-600"
-              >
-                <Mic className="h-5 w-5" />
-                Start Recording
-              </Button>
-            ) : (
-              <Button
-                size="lg"
-                onClick={() => setIsRecording(false)}
-                variant="outline"
-                className="gap-2 border-red-500 text-red-500"
-              >
+            <Button
+              size="lg"
+              onClick={() => {
+                if (recordingState === "idle") {
+                  setRecordingState("recording");
+                  return;
+                }
+
+                if (recordingState === "recording") {
+                  setRecordingState("completed");
+                }
+              }}
+              disabled={recordingState === "completed"}
+              className="gap-2 bg-red-500 text-white hover:bg-red-600 disabled:opacity-70"
+            >
+              {recordingState === "recording" ? (
                 <Square className="h-5 w-5" />
-                Stop Recording
-              </Button>
-            )}
+              ) : (
+                <Mic className="h-5 w-5" />
+              )}
+              {recordingState === "recording" ? "답변 완료" : "Start Recording"}
+            </Button>
           </div>
 
           <div className="mb-4 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3">
