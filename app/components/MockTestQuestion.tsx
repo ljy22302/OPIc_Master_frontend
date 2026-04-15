@@ -216,26 +216,7 @@ export function MockTestQuestion() {
           </motion.div>
         )}
 
-        <motion.div
-          key={currentQuestion}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-4"
-        >
-          <span
-            className={`inline-block rounded-full px-4 py-2 text-sm font-semibold ${
-              currentQ.type === "Self-Intro"
-                ? "bg-yellow-100 text-gray-900"
-                : currentQ.type === "Role Play"
-                  ? "bg-gray-200 text-gray-900"
-                  : currentQ.type === "Follow-up"
-                    ? "bg-gray-300 text-gray-900"
-                    : "bg-yellow-200 text-gray-900"
-            }`}
-          >
-            {currentQ.type}
-          </span>
-        </motion.div>
+
 
         <motion.div
           key={`question-${currentQuestion}`}
@@ -274,6 +255,25 @@ export function MockTestQuestion() {
               </div>
 
               <div className="flex flex-col justify-center">
+                <motion.div
+                key={currentQuestion}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-4">
+                  <span
+                  className={`inline-block rounded-full px-4 py-2 text-sm font-semibold ${
+                  currentQ.type === "Self-Intro"
+                  ? "bg-yellow-100 text-gray-900"
+                  : currentQ.type === "Role Play"
+                  ? "bg-gray-200 text-gray-900"
+                  : currentQ.type === "Follow-up"
+                  ? "bg-gray-300 text-gray-900"
+                  : "bg-yellow-200 text-gray-900"
+                }`}
+                >
+                {currentQ.type}
+                </span>
+                </motion.div>
                 <p className="mb-3 text-sm font-semibold text-gray-700">진행 상태</p>
                 <div className="grid grid-cols-5 gap-2 sm:grid-cols-10 lg:grid-cols-10">
                   {progressSteps.map((step) => {

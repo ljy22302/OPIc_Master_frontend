@@ -385,7 +385,7 @@ export function Resources() {
                                   className="h-auto gap-1 px-0 py-0 text-gray-700 hover:bg-transparent hover:text-gray-900"
                                   onClick={() => toggleMeaning(item.phrase)}
                                 >
-                                  해석▶
+                                  ▶해석
                                 </Button>
                                 {isExpanded && <p className="text-sm text-gray-600">{item.meaning}</p>}
                               </div>
