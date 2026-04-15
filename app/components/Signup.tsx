@@ -164,9 +164,7 @@ export function Signup() {
               <div>
                 <Label htmlFor="password" className="mb-2 block text-sm font-semibold text-gray-900">
                   <span className="text-red-500">*</span> 비밀번호
-                  <span className="ml-2 text-xs font-medium text-red-500">
-                    8~20자의 비밀번호를 입력해주세요
-                  </span>
+                  
                 </Label>
                 <Input
                   id="password"
@@ -175,14 +173,14 @@ export function Signup() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="비밀번호 입력 (8~20자)"
                 />
+                <span className="ml-2 text-xs font-medium text-red-500">
+                    영문과 숫자, 특수기호(!, @, #, $, %, ^, &, *) 중 2개 이상을 포함한 8~20자의 비밀번호를 입력해주세요
+                </span>
               </div>
 
               <div>
                 <Label htmlFor="confirmPassword" className="mb-2 block text-sm font-semibold text-gray-900">
                   <span className="text-red-500">*</span> 비밀번호 확인
-                  <span className="ml-2 text-xs font-medium text-red-500">
-                    비밀번호가 일치하는지 확인해주세요
-                  </span>
                 </Label>
                 <Input
                   id="confirmPassword"
