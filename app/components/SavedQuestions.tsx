@@ -1,7 +1,16 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "motion/react";
-import { ArrowLeft, FolderOpen, Play, RotateCcw, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Bookmark,
+  BookOpen,
+  FolderOpen,
+  MessageSquare,
+  Play,
+  RotateCcw,
+  Trash2,
+} from "lucide-react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
@@ -25,6 +34,16 @@ type DeletedQuestion = {
   daysLeft: number;
 };
 
+type SavedPhrase = {
+  phrase: string;
+  meaning: string;
+};
+
+type SavedWordGroup = {
+  topic: string;
+  words: Array<{ word: string; meaning: string }>;
+};
+
 const savedQuestions: SavedQuestion[] = [
   {
     id: 1,
@@ -40,14 +59,12 @@ const savedQuestions: SavedQuestion[] = [
   },
   {
     id: 2,
-    category: "국내여행",
+    category: "국내 여행",
     level: "5-6",
     question: "Describe a memorable travel experience from your past.",
     savedDate: "2026-04-07",
     attempts: 1,
-    answers: [
-      "I once visited Busan with my family, and the beach view was amazing.",
-    ],
+    answers: ["I once visited Busan with my family, and the beach view was amazing."],
   },
   {
     id: 3,
@@ -68,9 +85,7 @@ const savedQuestions: SavedQuestion[] = [
     question: "Tell me about a dish you like to cook at home.",
     savedDate: "2026-04-05",
     attempts: 1,
-    answers: [
-      "I like to cook pasta at home because it is easy and tastes great.",
-    ],
+    answers: ["I like to cook pasta at home because it is easy and tastes great."],
   },
 ];
 
@@ -93,37 +108,85 @@ const deletedQuestions: DeletedQuestion[] = [
   },
 ];
 
+const savedPhrases: SavedPhrase[] = [
+  {
+    phrase: "Let me introduce myself...",
+    meaning: "제가 자기소개를 시작하겠습니다.",
+  },
+  {
+    phrase: "To be more specific...",
+    meaning: "좀 더 구체적으로 말하자면",
+  },
+  {
+    phrase: "In conclusion...",
+    meaning: "결론적으로",
+  },
+  {
+    phrase: "That's all I wanted to say about...",
+    meaning: "…에 대해 제가 말씀드리고 싶었던 것은 이것이 전부입니다.",
+  },
+];
+
+const savedWordGroups: SavedWordGroup[] = [
+  {
+    topic: "카페",
+    words: [
+      { word: "atmosphere", meaning: "분위기" },
+      { word: "cozy", meaning: "아늑한" },
+      { word: "espresso", meaning: "에스프레소" },
+      { word: "pastry", meaning: "페이스트리" },
+    ],
+  },
+  {
+    topic: "운동",
+    words: [
+      { word: "workout routine", meaning: "운동 루틴" },
+      { word: "cardio", meaning: "유산소 운동" },
+      { word: "strength training", meaning: "근력 운동" },
+      { word: "endurance", meaning: "지구력" },
+    ],
+  },
+  {
+    topic: "국내 여행",
+    words: [
+      { word: "road trip", meaning: "자동차 여행" },
+      { word: "itinerary", meaning: "여행 일정" },
+      { word: "accommodation", meaning: "숙소" },
+      { word: "scenic", meaning: "경치 좋은" },
+    ],
+  },
+];
+
 const topicCategories = [
   "공연",
-  "국내여행",
+  "국내 여행",
   "카페",
   "운동",
   "집",
   "요리",
   "캠핑",
-  "조깅/산책",
-  "사는 지역",
+  "조깅/걷기",
+  "주거",
   "해외여행",
   "휴일",
   "이웃",
   "술집",
   "음악",
   "게임",
-  "해변",
+  "바다",
   "공원",
   "산",
   "쇼핑",
   "영화",
-  "구직",
+  "직장",
   "SNS",
-  "역할문제",
-  "돌발문제"
 ];
 
 export function SavedQuestions() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("saved");
-  const [activeTopic, setActiveTopic] = useState<string | null>(null);
+  const [activeTopic, setActiveTopic] = useState<string | null>("카페");
+  const [expandedPhrase, setExpandedPhrase] = useState<string | null>(null);
   const [openAnswers, setOpenAnswers] = useState<number | null>(null);
 
   const filteredQuestions = activeTopic
@@ -143,14 +206,16 @@ export function SavedQuestions() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">저장된 문제</h1>
-            <p className="text-gray-600">복습이 필요한 문제를 다시 풀어보세요</p>
+            <h1 className="text-3xl font-bold text-gray-900">저장된 자료</h1>
+            <p className="text-gray-600">저장한 문제, 문장, 단어를 한곳에서 다시 확인해보세요.</p>
           </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="saved">저장된 문제 ({savedQuestions.length})</TabsTrigger>
+            <TabsTrigger value="phrases">필수문장 ({savedPhrases.length})</TabsTrigger>
+            <TabsTrigger value="words">저장된 단어 ({savedWordGroups.reduce((sum, group) => sum + group.words.length, 0)})</TabsTrigger>
             <TabsTrigger value="deleted">휴지통 ({deletedQuestions.length})</TabsTrigger>
           </TabsList>
 
@@ -169,16 +234,16 @@ export function SavedQuestions() {
                 <Card className="border border-gray-200 bg-gray-50 p-4">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <h2 className="text-lg font-semibold text-gray-900">연결된 주제</h2>
+                      <h2 className="text-lg font-semibold text-gray-900">저장된 주제별 문제</h2>
                       <p className="text-sm text-gray-600">
-                        PracticeSetup에 있는 주제 목록을 기준으로 저장된 문제를 확인하세요.
+                        PracticeSetup의 주제 목록을 기준으로 저장된 문제를 확인하세요.
                       </p>
                     </div>
                     <div className="text-sm text-gray-500">저장된 문제: {savedQuestions.length}개</div>
                   </div>
                 </Card>
 
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   {topicCategories.map((topic) => {
                     const count = topicCounts[topic] ?? 0;
                     const isActive = activeTopic === topic;
@@ -260,13 +325,13 @@ export function SavedQuestions() {
                                           className="h-auto px-0 py-0 text-sm font-semibold text-gray-800 hover:bg-transparent hover:text-gray-900"
                                           onClick={() => setOpenAnswers(isOpen ? null : item.id)}
                                         >
-                                          지난 답변 보기
+                                          저장 답변 보기
                                         </Button>
                                       </div>
 
                                       {isOpen && (
                                         <div className="mt-4 rounded-xl border border-yellow-200 bg-yellow-50 p-4">
-                                          <h4 className="mb-3 text-sm font-semibold text-gray-900">지난 답변</h4>
+                                          <h4 className="mb-3 text-sm font-semibold text-gray-900">저장 답변</h4>
                                           <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
                                             {item.answers.map((answer, answerIndex) => (
                                               <div
@@ -311,7 +376,7 @@ export function SavedQuestions() {
                     <Card className="border border-gray-200 bg-white p-10 text-center">
                       <FolderOpen className="mx-auto mb-4 h-14 w-14 text-gray-300" />
                       <h4 className="mb-2 text-lg font-semibold text-gray-900">주제를 선택하면 저장된 문제를 볼 수 있습니다</h4>
-                      <p className="text-sm text-gray-600">PracticeSetup의 주제 목록을 클릭하면 해당 주제의 저장된 문제가 표시됩니다.</p>
+                      <p className="text-sm text-gray-600">주제 버튼을 눌러 해당 주제의 저장된 문제를 확인하세요.</p>
                     </Card>
                   )}
                 </div>
@@ -319,12 +384,95 @@ export function SavedQuestions() {
             )}
           </TabsContent>
 
+          <TabsContent value="phrases" className="mt-6">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+              <Card className="border border-gray-200 bg-gray-50 p-4">
+                <div className="flex items-center gap-3">
+                  <MessageSquare className="h-5 w-5 text-yellow-500" />
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900">필수문장</h2>
+                    <p className="text-sm text-gray-600">Resources 화면의 카드 구조를 참고해 저장된 필수 표현을 모아두었습니다.</p>
+                  </div>
+                </div>
+              </Card>
+
+              <div className="grid gap-4">
+                {savedPhrases.map((item) => {
+                  const isOpen = expandedPhrase === item.phrase;
+
+                  return (
+                    <Card key={item.phrase} className="border border-yellow-100 bg-yellow-50 p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-gray-900">{item.phrase}</p>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="mt-2 h-auto gap-1 px-0 py-0 text-gray-700 hover:bg-transparent hover:text-gray-900"
+                            onClick={() => setExpandedPhrase(isOpen ? null : item.phrase)}
+                          >
+                            뜻 보기
+                          </Button>
+                          {isOpen && <p className="mt-2 text-sm text-gray-600">{item.meaning}</p>}
+                        </div>
+                        <Bookmark className="mt-1 h-4 w-4 text-yellow-600" fill="currentColor" />
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            </motion.div>
+          </TabsContent>
+
+          <TabsContent value="words" className="mt-6">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+              <Card className="border border-gray-200 bg-gray-50 p-4">
+                <div className="flex items-center gap-3">
+                  <BookOpen className="h-5 w-5 text-yellow-500" />
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900">저장된 단어</h2>
+                    <p className="text-sm text-gray-600">단어 아래에 뜻이 바로 보이도록 Resources의 어휘 카드 구조를 참고했습니다.</p>
+                  </div>
+                </div>
+              </Card>
+
+              <div className="space-y-6">
+                {savedWordGroups.map((group) => (
+                  <Card key={group.topic} className="bg-white p-6">
+                    <div className="mb-4 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <BookOpen className="h-5 w-5 text-yellow-500" />
+                        <h3 className="text-xl font-bold text-gray-900">{group.topic}</h3>
+                      </div>
+                      <span className="text-sm text-gray-500">{group.words.length}개 저장됨</span>
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {group.words.map((item) => (
+                        <div
+                          key={item.word}
+                          className="flex items-start justify-between gap-3 rounded-lg border border-yellow-100 bg-yellow-50 p-3"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-gray-900">{item.word}</p>
+                            <p className="mt-1 text-sm text-gray-600">{item.meaning}</p>
+                          </div>
+                          <Bookmark className="h-4 w-4 text-yellow-600" fill="currentColor" />
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </motion.div>
+          </TabsContent>
+
           <TabsContent value="deleted" className="mt-6">
             {deletedQuestions.length === 0 ? (
               <Card className="bg-white p-12 text-center">
                 <Trash2 className="mx-auto mb-4 h-16 w-16 text-gray-300" />
                 <h3 className="mb-2 text-xl font-semibold text-gray-900">휴지통이 비어있습니다</h3>
-                <p className="text-gray-600">삭제된 문제는 7일간 보관됩니다.</p>
+                <p className="text-gray-600">삭제된 문제는 7일 동안 보관됩니다.</p>
               </Card>
             ) : (
               <div className="space-y-4">
