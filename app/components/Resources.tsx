@@ -78,6 +78,137 @@ const topicVocabulary: TopicItem[] = [
   { topic: "SNS", words: ["post", "share", "follow", "comment", "hashtag", "profile"] },
 ];
 
+const vocabularyMeanings: Record<string, string> = {
+  concert: "콘서트",
+  stage: "무대",
+  audience: "관객",
+  rehearsal: "리허설",
+  ticket: "티켓",
+  microphone: "마이크",
+  "road trip": "자동차 여행",
+  itinerary: "여행 일정",
+  "local food": "현지 음식",
+  accommodation: "숙소",
+  scenic: "경치 좋은",
+  budget: "예산",
+  atmosphere: "분위기",
+  cozy: "아늑한",
+  "latte art": "라떼 아트",
+  "specialty coffee": "스페셜티 커피",
+  espresso: "에스프레소",
+  pastry: "페이스트리",
+  "workout routine": "운동 루틴",
+  cardio: "유산소 운동",
+  "strength training": "근력 운동",
+  flexibility: "유연성",
+  endurance: "지구력",
+  gym: "헬스장",
+  "living room": "거실",
+  bedroom: "침실",
+  kitchen: "주방",
+  spacious: "넓은",
+  organized: "정돈된",
+  comfort: "편안함",
+  recipe: "레시피",
+  ingredient: "재료",
+  cook: "요리하다",
+  season: "간을 맞추다",
+  boil: "끓이다",
+  bake: "굽다",
+  tent: "텐트",
+  campfire: "캠프파이어",
+  "sleeping bag": "침낭",
+  outdoor: "야외",
+  backpack: "배낭",
+  nature: "자연",
+  jogging: "조깅",
+  walking: "걷기",
+  route: "경로",
+  pace: "속도",
+  "fresh air": "신선한 공기",
+  stamina: "체력",
+  apartment: "아파트",
+  rent: "임대하다",
+  deposit: "보증금",
+  neighbor: "이웃",
+  residential: "주거의",
+  lease: "임대 계약",
+  passport: "여권",
+  flight: "비행편",
+  destination: "목적지",
+  souvenir: "기념품",
+  customs: "세관",
+  guidebook: "안내서",
+  holiday: "휴일",
+  "long weekend": "연휴",
+  relax: "휴식하다",
+  "family time": "가족 시간",
+  travel: "여행",
+  break: "휴식",
+  community: "지역사회",
+  friendly: "친절한",
+  helpful: "도움이 되는",
+  greeting: "인사",
+  "shared space": "공용 공간",
+  bar: "술집",
+  drinks: "음료",
+  gathering: "모임",
+  colleague: "동료",
+  toast: "건배",
+  conversation: "대화",
+  song: "노래",
+  lyrics: "가사",
+  playlist: "재생목록",
+  performance: "공연",
+  genre: "장르",
+  melody: "멜로디",
+  game: "게임",
+  level: "레벨",
+  challenge: "도전",
+  player: "플레이어",
+  strategy: "전략",
+  mission: "임무",
+  ocean: "바다",
+  waves: "파도",
+  beach: "해변",
+  "sea breeze": "바닷바람",
+  sunset: "석양",
+  swim: "수영하다",
+  park: "공원",
+  bench: "벤치",
+  trees: "나무들",
+  walkway: "산책로",
+  picnic: "피크닉",
+  mountain: "산",
+  hiking: "등산",
+  trail: "산길",
+  peak: "정상",
+  view: "전망",
+  "shopping mall": "쇼핑몰",
+  discount: "할인",
+  purchase: "구매",
+  brand: "브랜드",
+  cart: "장바구니",
+  receipt: "영수증",
+  movie: "영화",
+  scene: "장면",
+  actor: "배우",
+  storyline: "줄거리",
+  director: "감독",
+  office: "사무실",
+  coworker: "동료 직원",
+  meeting: "회의",
+  deadline: "마감일",
+  task: "업무",
+  project: "프로젝트",
+  post: "게시글",
+  share: "공유하다",
+  follow: "팔로우하다",
+  comment: "댓글",
+  hashtag: "해시태그",
+  profile: "프로필",
+};
+
 const usefulTips: Array<{ title: string; content: TipItem[] }> = [
   {
     title: "시간 벌기 표현",
@@ -254,7 +385,7 @@ export function Resources() {
                                   className="h-auto gap-1 px-0 py-0 text-gray-700 hover:bg-transparent hover:text-gray-900"
                                   onClick={() => toggleMeaning(item.phrase)}
                                 >
-                                  해석▶️
+                                  해석▶
                                 </Button>
                                 {isExpanded && <p className="text-sm text-gray-600">{item.meaning}</p>}
                               </div>
@@ -295,10 +426,17 @@ export function Resources() {
                   <div className="grid gap-3 sm:grid-cols-2">
                     {topic.words.map((word) => {
                       const isSaved = savedWords.includes(word);
+                      const meaning = vocabularyMeanings[word] ?? "";
 
                       return (
-                        <div key={word} className="flex items-center justify-between rounded-lg border border-yellow-100 bg-yellow-50 p-3">
-                          <p className="text-sm text-gray-800">{word}</p>
+                        <div
+                          key={word}
+                          className="flex items-start justify-between gap-3 rounded-lg border border-yellow-100 bg-yellow-50 p-3"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-gray-900">{word}</p>
+                            {meaning && <p className="mt-1 text-sm text-gray-600">{meaning}</p>}
+                          </div>
                           <Button
                             size="icon"
                             variant="ghost"
@@ -341,7 +479,7 @@ export function Resources() {
                                 className="mt-2 h-auto gap-1 px-0 py-0 text-gray-700 hover:bg-transparent hover:text-gray-900"
                                 onClick={() => setExpandedTip(isExpanded ? null : key)}
                               >
-                                예문 및 해석
+                                예문 및 해석▶
                               </Button>
                               {isExpanded && (
                                 <div className="mt-2 space-y-1">

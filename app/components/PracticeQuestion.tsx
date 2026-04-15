@@ -47,9 +47,19 @@ function PlaceholderImage() {
       <rect x="160" y="152" width="180" height="14" rx="7" fill="#cbd5e1" />
       <rect x="160" y="180" width="140" height="14" rx="7" fill="#cbd5e1" />
       <circle cx="260" cy="208" r="34" fill="#fde68a" />
-      <path d="M260 190c-10 0-18 8-18 18v8c0 10 8 18 18 18s18-8 18-18v-8c0-10-8-18-18-18zm-7 18c0-4 3-7 7-7s7 3 7 7v8c0 4-3 7-7 7s-7-3-7-7v-8z" fill="#111827" opacity="0.9" />
+      <path
+        d="M260 190c-10 0-18 8-18 18v8c0 10 8 18 18 18s18-8 18-18v-8c0-10-8-18-18-18zm-7 18c0-4 3-7 7-7s7 3 7 7v8c0 4-3 7-7 7s-7-3-7-7v-8z"
+        fill="#111827"
+        opacity="0.9"
+      />
       <rect x="86" y="242" width="348" height="54" rx="18" fill="#fff" stroke="#fde68a" strokeWidth="4" />
-      <path d="M126 268c18-10 34-10 52 0s34 10 52 0 34-10 52 0 34 10 52 0 34-10 52 0" stroke="#fbbf24" strokeWidth="4" fill="none" strokeLinecap="round" />
+      <path
+        d="M126 268c18-10 34-10 52 0s34 10 52 0 34-10 52 0 34 10 52 0 34-10 52 0"
+        stroke="#fbbf24"
+        strokeWidth="4"
+        fill="none"
+        strokeLinecap="round"
+      />
       <circle cx="94" cy="64" r="22" fill="#f59e0b" opacity="0.18" />
       <circle cx="430" cy="86" r="18" fill="#f59e0b" opacity="0.18" />
     </svg>
@@ -61,7 +71,9 @@ export function PracticeQuestion() {
   const navigate = useNavigate();
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [timeLeft, setTimeLeft] = useState(recordingLimit);
-  const [isRecording, setIsRecording] = useState(false);
+  const [recordingState, setRecordingState] = useState<"idle" | "recording" | "completed">(
+    "idle"
+  );
   const [showQuestion, setShowQuestion] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [transcript] = useState("");
@@ -83,13 +95,13 @@ export function PracticeQuestion() {
     }) ?? {};
 
   useEffect(() => {
-    if (!isRecording) {
+    if (recordingState !== "recording") {
       return;
     }
 
     const timer = setTimeout(() => setTimeLeft((prev) => prev - 1), 1000);
     return () => clearTimeout(timer);
-  }, [isRecording, timeLeft]);
+  }, [recordingState, timeLeft]);
 
   useEffect(() => {
     if (!transitionPhase) {
@@ -106,7 +118,7 @@ export function PracticeQuestion() {
         if (currentQuestion < questions.length - 1) {
           setCurrentQuestion((prev) => prev + 1);
           setTimeLeft(recordingLimit);
-          setIsRecording(false);
+          setRecordingState("idle");
           setShowQuestion(false);
           setShowHint(false);
           setPlayCount(0);
@@ -209,21 +221,23 @@ export function PracticeQuestion() {
         <Card className="border-2 border-yellow-200 bg-yellow-50 p-6 shadow-sm">
           <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
             <div className="flex flex-col items-center">
-              <div className="mb-4 inline-flex max-w-full rounded-[36px] border border-yellow-200 bg-white p-4 shadow-md">
-                {imageError ? (
-                  <div className="flex min-h-[300px] items-center justify-center rounded-[28px] bg-white p-4">
-                    <PlaceholderImage />
-                  </div>
-                ) : (
-                  <div className="flex h-[300px] w-full items-center justify-center rounded-[28px] bg-white p-3">
-                    <img
-                      src={ossCharacter}
-                      alt="Practice question"
-                      className="h-full w-auto max-w-full rounded-[24px] object-contain"
-                      onError={() => setImageError(true)}
-                    />
-                  </div>
-                )}
+              <div className="relative mb-4 flex w-full max-w-[320px] justify-center">
+                <div className="relative z-10 mt-3 inline-flex w-[250px] rounded-[28px] border border-yellow-200 bg-white p-3 shadow-md">
+                  {imageError ? (
+                    <div className="flex h-[214px] w-full items-center justify-center rounded-[22px] bg-white p-4">
+                      <PlaceholderImage />
+                    </div>
+                  ) : (
+                    <div className="flex h-[214px] w-full items-center justify-center overflow-hidden rounded-[22px] bg-white p-2">
+                      <img
+                        src={ossCharacter}
+                        alt="OSS_character"
+                        className="h-full w-full rounded-[18px] object-contain object-center"
+                        onError={() => setImageError(true)}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
 
               <Button
@@ -235,7 +249,7 @@ export function PracticeQuestion() {
                   }
                 }}
                 disabled={!canPlayQuestion}
-                className="gap-2 text-gray-700 disabled:opacity-40"
+                className="mx-auto gap-2 text-gray-700 disabled:opacity-40"
               >
                 <Volume2 className="h-4 w-4" />
                 Play Question
@@ -275,13 +289,10 @@ export function PracticeQuestion() {
               </Button>
 
               {showHint && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                >
-                  <Card className="mt-4 border-yellow-200 bg-yellow-50 p-4">
-                    <p className="mb-2 text-sm font-semibold text-gray-900">Answer Hint</p>
-                    <p className="text-sm text-gray-700">{questions[currentQuestion].hint}</p>
+                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+                  <Card className="mt-4 border-yellow-200 bg-white p-4">
+                    <p className="mb-2 text-base font-semibold text-gray-900">Answer Hint</p>
+                    <p className="text-base text-gray-700">{questions[currentQuestion].hint}</p>
                   </Card>
                 </motion.div>
               )}
@@ -291,15 +302,24 @@ export function PracticeQuestion() {
 
         <Card className="mb-6 mt-6 bg-white p-6">
           <div className="mb-4 flex justify-center">
-            <Button
-              size="lg"
-              onClick={() => setIsRecording(true)}
-              disabled={isRecording}
-              className="gap-2 bg-red-500 text-white hover:bg-red-600 disabled:opacity-70"
-            >
-              <Mic className="h-5 w-5" />
-              {isRecording ? "녹음 중" : "Start Recording"}
-            </Button>
+              <Button
+                size="lg"
+                onClick={() => {
+                  if (recordingState === "idle") {
+                    setRecordingState("recording");
+                    return;
+                  }
+
+                  if (recordingState === "recording") {
+                    setRecordingState("completed");
+                  }
+                }}
+                disabled={recordingState === "completed"}
+                className="gap-2 bg-red-500 text-white hover:bg-red-600 disabled:opacity-70"
+              >
+                <Mic className="h-5 w-5" />
+                {recordingState === "recording" ? "답변완료" : "Start Recording"}
+              </Button>
           </div>
 
           <div className="mb-4 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3">
@@ -362,7 +382,7 @@ export function PracticeQuestion() {
                 </div>
               </div>
               <p className="text-center text-2xl font-bold text-gray-900">
-                {transitionPhase === "saving" ? "답변 저장 중" : "다음문제 준비 중"}
+                {transitionPhase === "saving" ? "답변 저장 중" : "다음 문제 준비 중"}
               </p>
               <p className="mt-3 text-center text-sm text-gray-600">
                 잠시만 기다려 주세요.
