@@ -258,44 +258,52 @@ export function PracticeQuestion() {
             </div>
 
             <div className="flex flex-col justify-start">
-              {showQuestion ? (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mb-4 rounded-2xl border border-gray-200 bg-white p-5"
-                >
-                  <p className="text-xl font-medium leading-relaxed text-gray-900">
-                    {questions[currentQuestion].text}
-                  </p>
-                </motion.div>
-              ) : (
-                <Button
-                  variant="outline"
-                  onClick={() => setShowQuestion(true)}
-                  className="mb-3 w-full justify-center gap-2"
-                >
-                  <FileText className="h-4 w-4" />
-                  Show Question
-                </Button>
-              )}
+              <div className="mb-4 grid min-h-[300px] grid-rows-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowQuestion((prev) => !prev);
+                  }}>
+                  <div className="flex h-full w-full items-center justify-center rounded-xl border border-gray-300 bg-white px-4 text-center">
+                    {showQuestion ? (
+                      <motion.div
+                        key={`question-${currentQuestion}`}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="text-left"
+                      >
+                        <p className="text-xl font-medium leading-relaxed text-gray-900">
+                          {questions[currentQuestion].text}
+                        </p>
+                      </motion.div>
+                    ) : (
+                      <span className="text-sm font-medium text-gray-900">Show Question</span>
+                    )}
+                  </div>
+                </button>
 
-              <Button
-                variant="outline"
-                onClick={() => setShowHint(!showHint)}
-                className="w-full justify-center gap-2"
-              >
-                <Lightbulb className="h-4 w-4" />
-                Hint
-              </Button>
-
-              {showHint && (
-                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-                  <Card className="mt-4 border-yellow-200 bg-white p-4">
-                    <p className="mb-2 text-base font-semibold text-gray-900">Answer Hint</p>
-                    <p className="text-base text-gray-700">{questions[currentQuestion].hint}</p>
-                  </Card>
-                </motion.div>
-              )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowHint((prev) => !prev);
+                  }}>
+                  <div className="flex h-full w-full items-center justify-center rounded-xl border border-gray-300 bg-white px-4 text-center">
+                    {showHint ? (
+                      <motion.div
+                        key={`hint-${currentQuestion}`}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="text-left"
+                      >
+                        <p className="mb-2 text-base font-semibold text-gray-900">Answer Hint</p>
+                        <p className="text-base text-gray-700">{questions[currentQuestion].hint}</p>
+                      </motion.div>
+                    ) : (
+                      <span className="text-sm font-medium text-gray-900">Word Hint</span>
+                    )}
+                  </div>
+                </button>
+              </div>
             </div>
           </div>
         </Card>
