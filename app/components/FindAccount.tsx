@@ -42,7 +42,7 @@ function AccountTypePicker({
 function FindIdCard() {
   const [type, setType] = useState<AccountType>("일반");
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [result, setResult] = useState("");
 
   return (
@@ -67,14 +67,14 @@ function FindIdCard() {
           />
         </div>
         <div>
-          <Label htmlFor="find-id-email" className="mb-2 block text-sm font-semibold text-sky-800">
-            이메일
+          <Label htmlFor="find-id-phone" className="mb-2 block text-sm font-semibold text-sky-800">
+            전화번호
           </Label>
           <Input
-            id="find-id-email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="이메일을 입력해주세요"
+            id="find-id-phone"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="전화번호를 입력해주세요"
           />
         </div>
       </div>
@@ -90,7 +90,7 @@ function FindIdCard() {
           type="button"
           className="w-full bg-yellow-400 text-gray-900 hover:bg-yellow-500"
           onClick={() => {
-            if (!name || !email) {
+            if (!name || !phone) {
               setResult("");
               return;
             }
