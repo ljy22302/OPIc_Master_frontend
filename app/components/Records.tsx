@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "motion/react";
-import { ArrowLeft, TrendingUp, Calendar, Award, Target, Clock, BarChart3 } from "lucide-react";
+import { ArrowLeft, ArrowUp, TrendingUp, Calendar, Award, Target, Clock, BarChart3 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Progress } from "./ui/progress";
@@ -76,15 +76,30 @@ const getMonthStartsOn = (year: number, month: number) => new Date(year, month -
 
 type CalendarCell = { day: number; count: number } | null;
 
+type MonthlyActivity = {
+  totalPractices: number;
+  totalMockTests: number;
+  totalTime: string;
+  weekCounts: number[];
+  dayOverrides?: Record<number, number>;
+};
+
 const getCountsByDay = (weekCounts: number[], dayCount: number) =>
   Array.from({ length: dayCount }, (_, index) =>
-    weekCounts[Math.min(Math.floor(index / 7), weekCounts.length - 1)] ?? 0
+    (() => {
+      const weekCount = weekCounts[Math.min(Math.floor(index / 7), weekCounts.length - 1)] ?? 0;
+      const dayIndexInWeek = index % 7;
+      return dayIndexInWeek < weekCount ? 1 : 0;
+    })()
   );
+
+const getMonthlyTotal = (calendar: CalendarCell[]) =>
+  calendar.reduce((sum, cell) => sum + (cell?.count ?? 0), 0);
 
 const getCalendarDays = (
   year: number,
   month: number,
-  activity: { totalPractices: number; totalMockTests: number; totalTime: string; weekCounts: number[] }
+  activity: MonthlyActivity
 ): CalendarCell[] => {
   const today = new Date();
   const isCurrentMonth = year === today.getFullYear() && month === today.getMonth() + 1;
@@ -99,6 +114,13 @@ const getCalendarDays = (
         return {
           day,
           count: 0,
+        } as CalendarCell;
+      }
+      const overrideCount = monthlyDayOverrides[month]?.[day];
+      if (typeof overrideCount === "number") {
+        return {
+          day,
+          count: overrideCount,
         } as CalendarCell;
       }
       return ({
@@ -124,6 +146,10 @@ const monthlyActivityData: Record<number, { totalPractices: number; totalMockTes
   12: { totalPractices: 14, totalMockTests: 2, totalTime: "11시간 30분", weekCounts: [3, 4, 4, 3] },
 };
 
+const monthlyDayOverrides: Record<number, Record<number, number>> = {
+  4: { 11: 5, 15: 4 },
+};
+
 export function Records() {
   const navigate = useNavigate();
   const now = new Date();
@@ -132,6 +158,7 @@ export function Records() {
   const visibleMonthYear = visibleMonthDate.getFullYear();
   const visibleMonthData = monthlyActivityData[visibleMonthNumber];
   const visibleMonthCalendar = getCalendarDays(visibleMonthYear, visibleMonthNumber, visibleMonthData);
+  const visibleMonthTotalPractices = getMonthlyTotal(visibleMonthCalendar);
   const dayNames = ["일", "월", "화", "수", "목", "금", "토"];
 
   const handlePrevMonth = () => {
@@ -303,7 +330,6 @@ export function Records() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
               <div>
                 <h3 className="text-lg font-bold text-gray-900">월간 학습 활동</h3>
-                <p className="text-sm text-gray-500">현재 월을 확인하고 좌우 버튼으로 월을 이동하세요.</p>
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={handlePrevMonth}>
@@ -322,7 +348,7 @@ export function Records() {
               <div className="flex items-center justify-between mb-4 gap-4">
                 <div>
                   <p className="text-sm text-gray-500">{monthLabels(visibleMonthNumber)}</p>
-                  <p className="text-xl font-bold text-gray-900">{visibleMonthData.totalPractices}회 학습</p>
+                  <p className="text-xl font-bold text-gray-900">{visibleMonthTotalPractices}회 학습</p>
                 </div>
                 <p className="text-sm text-gray-600">{visibleMonthData.totalTime}</p>
               </div>
@@ -342,11 +368,15 @@ export function Records() {
                     className={`min-h-[72px] rounded-2xl border p-2 text-left text-xs ${
                       cell === null
                         ? "bg-transparent border-transparent"
-                        : cell.count > 4
+                        : cell.count >= 5
                         ? "bg-yellow-300 text-gray-900"
-                        : cell.count > 2
+                        : cell.count >= 4
                         ? "bg-yellow-200 text-gray-900"
-                        : "bg-yellow-50 text-gray-700"
+                        : cell.count >= 2
+                        ? "bg-yellow-100 text-gray-900"
+                        : cell.count === 1
+                        ? "bg-yellow-50 text-gray-700"
+                        : "bg-white text-gray-700"
                     }`}
                   >
                     {cell ? (
@@ -421,6 +451,16 @@ export function Records() {
           </div>
         </motion.div>
       </div>
+
+      <Button
+        type="button"
+        size="icon"
+        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+        className="fixed bottom-6 right-6 z-50 h-12 w-12 rounded-full bg-yellow-400 text-gray-900 shadow-lg hover:bg-yellow-500"
+        aria-label="맨 위로 이동"
+      >
+        <ArrowUp className="h-5 w-5" />
+      </Button>
     </div>
   );
 }
