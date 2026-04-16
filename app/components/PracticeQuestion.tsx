@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { motion } from "motion/react";
 import { ArrowLeft, Bookmark, FileText, Lightbulb, Mic, Volume2 } from "lucide-react";
@@ -80,19 +80,24 @@ export function PracticeQuestion() {
   const [playCount, setPlayCount] = useState(0);
   const [transitionPhase, setTransitionPhase] = useState<TransitionPhase>(null);
   const [transitionAction, setTransitionAction] = useState<TransitionAction>(null);
+  const [transitionMessage, setTransitionMessage] = useState("");
   const [imageError, setImageError] = useState(false);
 
   const location = useLocation();
   const {
     difficultyLabel = "",
+    selectedType = "",
     selectedTypeLabel = "",
     selectedTopicLabels = [] as string[],
   } =
     (location.state as {
       difficultyLabel?: string;
+      selectedType?: string;
       selectedTypeLabel?: string;
       selectedTopicLabels?: string[];
     }) ?? {};
+
+  const questionLimit = selectedType === "random" ? 2 : questions.length;
 
   useEffect(() => {
     if (recordingState !== "recording") {
@@ -111,11 +116,14 @@ export function PracticeQuestion() {
     const timer = setTimeout(() => {
       if (transitionPhase === "saving") {
         setTransitionPhase("preparing");
+        setTransitionMessage(
+          transitionAction === "result" ? "결과 분석 중" : "다음 문제 준비 중"
+        );
         return;
       }
 
       if (transitionAction === "next") {
-        if (currentQuestion < questions.length - 1) {
+        if (currentQuestion < questionLimit - 1) {
           setCurrentQuestion((prev) => prev + 1);
           setTimeLeft(recordingLimit);
           setRecordingState("idle");
@@ -123,25 +131,36 @@ export function PracticeQuestion() {
           setShowHint(false);
           setPlayCount(0);
         } else {
-          navigate("/practice/result");
+          navigate("/practice/result", {
+            state: {
+              questionCount: questionLimit,
+              selectedType,
+            },
+          });
         }
       } else if (transitionAction === "result") {
-        navigate("/practice/result");
+        navigate("/practice/result", {
+          state: {
+            questionCount: questionLimit,
+            selectedType,
+          },
+        });
       }
 
       setTransitionPhase(null);
       setTransitionAction(null);
-    }, 1200);
+      setTransitionMessage("");
+    }, 1000);
 
     return () => clearTimeout(timer);
-  }, [transitionAction, transitionPhase, currentQuestion, navigate, recordingLimit]);
+  }, [transitionAction, transitionPhase, currentQuestion, navigate, questionLimit, recordingLimit]);
 
   const displayTypeText = useMemo(() => {
     if (!selectedTypeLabel) {
       return "";
     }
 
-    if (selectedTypeLabel === "주제선택분야" && selectedTopicLabels[0]) {
+    if (selectedTypeLabel === "二쇱젣?좏깮遺꾩빞" && selectedTopicLabels[0]) {
       return `${selectedTypeLabel} - ${selectedTopicLabels[0]}`;
     }
 
@@ -179,7 +198,8 @@ export function PracticeQuestion() {
       return;
     }
 
-    setTransitionAction(currentQuestion < questions.length - 1 ? "next" : "result");
+    setTransitionAction(currentQuestion < questionLimit - 1 ? "next" : "result");
+    setTransitionMessage("답변 저장 중");
     setTransitionPhase("saving");
   };
 
@@ -192,7 +212,7 @@ export function PracticeQuestion() {
           </Button>
           <div className="flex items-center gap-4">
             <span className="text-sm font-semibold text-gray-600">
-              Question {currentQuestion + 1} / {questions.length}
+              Question {currentQuestion + 1} / {questionLimit}
             </span>
           </div>
         </div>
@@ -272,12 +292,12 @@ export function PracticeQuestion() {
                         animate={{ opacity: 1, y: 0 }}
                         className="text-left"
                       >
-                        <p className="text-xl font-medium leading-relaxed text-gray-900">
+                        <p className="text-lg font-medium leading-relaxed text-center text-gray-900">
                           {questions[currentQuestion].text}
                         </p>
                       </motion.div>
                     ) : (
-                      <span className="text-sm font-medium text-gray-900">Show Question</span>
+                      <span className="text-2xl font-semimedium text-gray-900">Show Question</span>
                     )}
                   </div>
                 </button>
@@ -295,11 +315,12 @@ export function PracticeQuestion() {
                         animate={{ opacity: 1, y: 0 }}
                         className="text-left"
                       >
-                        <p className="mb-2 text-base font-semibold text-gray-900">Answer Hint</p>
-                        <p className="text-base text-gray-700">{questions[currentQuestion].hint}</p>
+                        <p className="text-lg font-medium leading-relaxed text-gray-700">
+                          {questions[currentQuestion].hint}
+                        </p>
                       </motion.div>
                     ) : (
-                      <span className="text-sm font-medium text-gray-900">Word Hint</span>
+                      <span className="text-2xl font-semimedium text-gray-900">Word Hint</span>
                     )}
                   </div>
                 </button>
@@ -373,7 +394,7 @@ export function PracticeQuestion() {
             disabled={!!transitionPhase}
             className="bg-yellow-400 text-gray-900 hover:bg-yellow-500 disabled:opacity-70"
           >
-            {currentQuestion < questions.length - 1 ? "Next Question" : "See Result"}
+            {currentQuestion < questionLimit - 1 ? "Next Question" : "See Result"}
           </Button>
         </div>
 
@@ -390,7 +411,7 @@ export function PracticeQuestion() {
                 </div>
               </div>
               <p className="text-center text-2xl font-bold text-gray-900">
-                {transitionPhase === "saving" ? "답변 저장 중" : "다음 문제 준비 중"}
+                {transitionMessage}
               </p>
               <p className="mt-3 text-center text-sm text-gray-600">
                 잠시만 기다려 주세요.

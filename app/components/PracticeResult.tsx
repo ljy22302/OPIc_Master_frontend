@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { motion } from "motion/react";
 import { CheckCircle2, TrendingUp, BookOpen, Home, RotateCcw } from "lucide-react";
 import { Button } from "./ui/button";
@@ -39,6 +39,10 @@ const feedback = {
 
 export function PracticeResult() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { questionCount = feedback.detailedFeedback.length } =
+    (location.state as { questionCount?: number }) ?? {};
+  const detailedFeedback = feedback.detailedFeedback.slice(0, questionCount);
 
   return (
     <div className="min-h-screen p-6 bg-gray-50">
@@ -70,7 +74,7 @@ export function PracticeResult() {
                 {feedback.grade}
               </h2>
               <p className="text-sm text-gray-500">
-                * 연습모드는 참고용입니다. 정확한 등급은 모의고사를 통해 확인하세요.
+                * 연습모드는 참고용입니다.
               </p>
             </div>
             <div className="mb-3">
@@ -137,7 +141,7 @@ export function PracticeResult() {
         >
           <h3 className="text-xl font-semibold text-gray-900 mb-4">문제별 상세 피드백</h3>
           <div className="space-y-4">
-            {feedback.detailedFeedback.map((item, index) => (
+            {detailedFeedback.map((item, index) => (
               <Card key={index} className="p-6 bg-white">
                 <h4 className="font-semibold text-gray-900 mb-3">Q{index + 1}. {item.question}</h4>
                 <div className="bg-gray-50 rounded-lg p-4 mb-3">
