@@ -119,8 +119,8 @@ const travelExperiences = [
 
 function InfoItem({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-start gap-2 rounded-xl bg-white/70 px-3 py-2">
-      <span className="min-w-24 text-sm font-semibold text-gray-700">{label}</span>
+    <div className="flex items-start gap-1 rounded-xl bg-white/70 px-1.5 py-1 sm:gap-2 sm:px-3 sm:py-2">
+      <span className="hidden min-w-24 text-sm font-semibold text-gray-700 lg:inline">{label}</span>
       <span className="text-sm text-gray-900">{value || "미선택"}</span>
     </div>
   );
@@ -185,9 +185,9 @@ export function MockTestSetup() {
         </div>
 
         <div className="grid gap-8 lg:grid-cols-[320px_1fr]">
-          <aside className="lg:sticky lg:top-6 lg:self-start">
-            <Card className="border-2 border-yellow-200 bg-yellow-50 p-5 shadow-sm">
-              <div className="mb-4 flex items-center justify-between gap-3">
+          <aside className="sticky top-2 z-20 self-start lg:sticky lg:top-6 lg:self-start">
+            <Card className="border-2 border-yellow-200 bg-yellow-50 p-2 shadow-sm lg:p-5">
+              <div className="mb-1.5 flex items-center justify-between gap-2 sm:mb-4 sm:gap-3">
                 <div>
                   <h2 className="text-lg font-semibold text-gray-900">선택 정보</h2>
                 </div>
@@ -196,7 +196,7 @@ export function MockTestSetup() {
                 </span>
               </div>
 
-              <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-0.5 lg:grid-cols-1">
                 <InfoItem label="현재 상태" value={currentStatuses.find((item) => item.value === currentStatus)?.label || "미선택"} />
                 <InfoItem label="학생 여부" value={studentStatuses.find((item) => item.value === studentStatus)?.label || "미선택"} />
                 <InfoItem label="거주 형태" value={livingSituations.find((item) => item.value === livingSituation)?.label || "미선택"} />
@@ -206,11 +206,11 @@ export function MockTestSetup() {
                 <InfoItem label="휴가/출장" value={selectedTravel.length > 0 ? selectedTravel.join(", ") : "미선택"} />
               </div>
 
-              <div className="mt-4">
+              <div className="mt-0">
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full justify-center gap-2 border-yellow-300 bg-white hover:bg-yellow-50"
+                  className="h-7 w-full justify-center gap-2 border-yellow-300 bg-white text-xs hover:bg-yellow-50"
                   onClick={() => setShowGuide((prev) => !prev)}
                 >
                   <HelpCircle className="h-4 w-4" />
@@ -222,16 +222,16 @@ export function MockTestSetup() {
                 <motion.div
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mt-4 space-y-3"
+                  className="mt-0 space-y-0.5"
                 >
-                  <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
+                  <div className="rounded-2xl border border-red-200 bg-red-50 p-2 text-sm text-red-600">
                     <p className="font-semibold text-gray-900">현재 상태, 학생 여부, 거주 형태, 여가 활동</p>
                     <p className="mt-1">
                       선택하지 않은 선지는 높은 확률로 출제되지 않아요.
                       대답하기 어려운 선지는 피해주세요.
                     </p>
                   </div>
-                  <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
+                  <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-2 text-sm text-yellow-800">
                     <p className="font-semibold text-gray-900">취미 관심사, 운동, 휴가/출장 경험</p>
                     <p className="mt-1">
                       선택한 선지는 높은 확률로 출제되어요.
@@ -299,19 +299,19 @@ export function MockTestSetup() {
 
               <Card className="bg-white p-6">
                 <h3 className="mb-3 text-lg font-semibold text-gray-900">현재 상태</h3>
-                <div className="grid gap-3 md:grid-cols-4">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
                   {currentStatuses.map((item) => (
                     <button
                       key={item.value}
                       type="button"
                       onClick={() => setCurrentStatus(item.value)}
-                      className={`rounded-2xl border p-4 text-left transition ${
+                      className={`rounded-2xl border p-2 text-left transition sm:p-3 ${
                         currentStatus === item.value
                           ? "border-yellow-400 bg-yellow-50 shadow"
                           : "border-gray-200 bg-white hover:border-gray-300"
                       }`}
                     >
-                      <p className="font-semibold text-gray-900">{item.label}</p>
+                      <p className="text-xs font-semibold text-gray-900 sm:text-sm">{item.label}</p>
                     </button>
                   ))}
                 </div>
@@ -320,19 +320,19 @@ export function MockTestSetup() {
 
               <Card className="bg-white p-6">
                 <h3 className="mb-3 text-lg font-semibold text-gray-900">학생 여부</h3>
-                <div className="grid gap-3 md:grid-cols-2">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-2">
                   {studentStatuses.map((item) => (
                     <button
                       key={item.value}
                       type="button"
                       onClick={() => setStudentStatus(item.value)}
-                      className={`rounded-2xl border p-4 text-left transition ${
+                      className={`rounded-2xl border p-2 text-left transition sm:p-3 ${
                         studentStatus === item.value
                           ? "border-yellow-400 bg-yellow-50 shadow"
                           : "border-gray-200 bg-white hover:border-gray-300"
                       }`}
                     >
-                      <p className="font-semibold text-gray-900">{item.label}</p>
+                      <p className="text-xs font-semibold text-gray-900 sm:text-sm">{item.label}</p>
                     </button>
                   ))}
                 </div>
@@ -341,19 +341,19 @@ export function MockTestSetup() {
 
               <Card className="bg-white p-6">
                 <h3 className="mb-3 text-lg font-semibold text-gray-900">거주 형태</h3>
-                <div className="grid gap-3 md:grid-cols-3">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {livingSituations.map((item) => (
                     <button
                       key={item.value}
                       type="button"
                       onClick={() => setLivingSituation(item.value)}
-                      className={`rounded-2xl border p-4 text-left transition ${
+                      className={`rounded-2xl border p-2 text-left transition sm:p-3 ${
                         livingSituation === item.value
                           ? "border-yellow-400 bg-yellow-50 shadow"
                           : "border-gray-200 bg-white hover:border-gray-300"
                       }`}
                     >
-                      <p className="font-semibold text-gray-900">{item.label}</p>
+                      <p className="text-xs font-semibold text-gray-900 sm:text-sm">{item.label}</p>
                     </button>
                   ))}
                 </div>
@@ -370,19 +370,19 @@ export function MockTestSetup() {
                     {selectedLeisure.length} 선택
                   </span>
                 </div>
-                <div className="grid gap-3 md:grid-cols-4">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
                   {leisureActivities.map((item) => (
                     <button
                       key={item}
                       type="button"
                       onClick={() => toggleMulti(item, selectedLeisure, setSelectedLeisure)}
-                      className={`rounded-2xl border p-3 text-left transition ${
+                      className={`rounded-2xl border p-2 text-left transition sm:p-3 ${
                         selectedLeisure.includes(item)
                           ? "border-yellow-400 bg-yellow-50 shadow"
                           : "border-gray-200 bg-white hover:border-gray-300"
                       }`}
                     >
-                      <p className="text-sm text-gray-900">{item}</p>
+                      <p className="text-xs font-medium text-gray-900 sm:text-sm">{item}</p>
                     </button>
                   ))}
                 </div>
@@ -399,19 +399,19 @@ export function MockTestSetup() {
                     {selectedHobbies.length} 선택
                   </span>
                 </div>
-                <div className="grid gap-3 md:grid-cols-4">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
                   {hobbyInterests.map((item) => (
                     <button
                       key={item}
                       type="button"
                       onClick={() => toggleMulti(item, selectedHobbies, setSelectedHobbies)}
-                      className={`rounded-2xl border p-3 text-left transition ${
+                      className={`rounded-2xl border p-2 text-left transition sm:p-3 ${
                         selectedHobbies.includes(item)
                           ? "border-yellow-400 bg-yellow-50 shadow"
                           : "border-gray-200 bg-white hover:border-gray-300"
                       }`}
                     >
-                      <p className="text-sm text-gray-900">{item}</p>
+                      <p className="text-xs font-medium text-gray-900 sm:text-sm">{item}</p>
                     </button>
                   ))}
                 </div>
@@ -428,19 +428,19 @@ export function MockTestSetup() {
                     {selectedExercises.length} 선택
                   </span>
                 </div>
-                <div className="grid gap-3 md:grid-cols-4">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
                   {exerciseActivities.map((item) => (
                     <button
                       key={item}
                       type="button"
                       onClick={() => toggleMulti(item, selectedExercises, setSelectedExercises)}
-                      className={`rounded-2xl border p-3 text-left transition ${
+                      className={`rounded-2xl border p-2 text-left transition sm:p-3 ${
                         selectedExercises.includes(item)
                           ? "border-yellow-400 bg-yellow-50 shadow"
                           : "border-gray-200 bg-white hover:border-gray-300"
                       }`}
                     >
-                      <p className="text-sm text-gray-900">{item}</p>
+                      <p className="text-xs font-medium text-gray-900 sm:text-sm">{item}</p>
                     </button>
                   ))}
                 </div>
@@ -457,19 +457,19 @@ export function MockTestSetup() {
                     {selectedTravel.length} 선택
                   </span>
                 </div>
-                <div className="grid gap-3 md:grid-cols-3">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {travelExperiences.map((item) => (
                     <button
                       key={item}
                       type="button"
                       onClick={() => toggleMulti(item, selectedTravel, setSelectedTravel)}
-                      className={`rounded-2xl border p-3 text-left transition ${
+                      className={`rounded-2xl border p-2 text-left transition sm:p-3 ${
                         selectedTravel.includes(item)
                           ? "border-yellow-400 bg-yellow-50 shadow"
                           : "border-gray-200 bg-white hover:border-gray-300"
                       }`}
                     >
-                      <p className="text-sm text-gray-900">{item}</p>
+                      <p className="text-xs font-medium text-gray-900 sm:text-sm">{item}</p>
                     </button>
                   ))}
                 </div>
