@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { motion } from "motion/react";
-import { ArrowLeft, Mic, Square, Volume2, AlertCircle } from "lucide-react";
+import { AlertCircle, ArrowLeft, Mic, Square, Volume2 } from "lucide-react";
+import { useSpeechToTextRecorder } from "../hooks/useSpeechToTextRecorder";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Progress } from "./ui/progress";
@@ -17,9 +18,9 @@ const mockQuestions = [
   { id: 8, type: "주제", text: "What kind of exercise do you do regularly?" },
   { id: 9, type: "주제", text: "Describe your exercise routine in detail." },
   { id: 10, type: "주제", text: "Tell me about a time when you achieved a fitness goal." },
-  { id: 11, type: "롤플레잉", text: "Your friend wants to join your gym. Call the gym and ask about membership options." },
-  { id: 12, type: "롤플레잉", text: "There's a problem with your membership. Call and explain the issue." },
-  { id: 13, type: "롤플레잉", text: "Suggest an alternative solution for the membership problem." },
+  { id: 11, type: "롤플레이", text: "Your friend wants to join your gym. Call the gym and ask about membership options." },
+  { id: 12, type: "롤플레이", text: "There's a problem with your membership. Call and explain the issue." },
+  { id: 13, type: "롤플레이", text: "Suggest an alternative solution for the membership problem." },
   { id: 14, type: "랜덤", text: "Describe a challenge you faced recently and how you overcame it." },
   { id: 15, type: "랜덤", text: "What are your plans for the next few years?" },
 ];
@@ -49,10 +50,21 @@ export function MockTestQuestion() {
 
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [questionTime, setQuestionTime] = useState(120);
-  const [totalTime, setTotalTime] = useState(2400); // 40 minutes
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(120); // 2분 녹음 타이머
-  const [transcript, setTranscript] = useState("");
+  const [totalTime, setTotalTime] = useState(2400);
+  const [recordingTime, setRecordingTime] = useState(120);
+
+  const {
+    error,
+    isRecording,
+    isUploading,
+    resetTranscript,
+    startRecording,
+    stopRecording,
+    transcript,
+  } = useSpeechToTextRecorder({
+    questionId: `mock-test-${mockQuestions[currentQuestion].id}`,
+    language: "en",
+  });
 
   useEffect(() => {
     if (!isRecording) {
@@ -64,8 +76,8 @@ export function MockTestQuestion() {
       return () => clearTimeout(timer);
     }
 
-    setIsRecording(false);
-  }, [isRecording, recordingTime]);
+    stopRecording();
+  }, [isRecording, recordingTime, stopRecording]);
 
   useEffect(() => {
     if (questionTime > 0) {
@@ -87,7 +99,6 @@ export function MockTestQuestion() {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const questionProgress = ((120 - questionTime) / 120) * 100;
   const totalProgress = ((currentQuestion + 1) / mockQuestions.length) * 100;
 
   const handleNext = () => {
@@ -95,8 +106,8 @@ export function MockTestQuestion() {
       setCurrentQuestion(currentQuestion + 1);
       setQuestionTime(120);
       setRecordingTime(120);
-      setTranscript("");
-      setIsRecording(false);
+      resetTranscript();
+      stopRecording(true);
     } else {
       navigate("/mocktest/result");
     }
@@ -106,39 +117,38 @@ export function MockTestQuestion() {
 
   const difficultyLabel = difficulty === "3-4" ? "Level 3-4" : "Level 5-6";
   const statusLabel = {
-    company: "회사",
+    company: "회사원",
     remote: "재택근무",
     teacher: "교사",
     unemployed: "무직",
   }[currentStatus] || "";
   const studentLabel = {
     student: "학생",
-    graduated: "졸업 후 5년 지남",
+    graduated: "졸업 후 5년 이내",
   }[studentStatus] || "";
   const livingSituationLabel = {
-    alone: "혼자",
+    alone: "혼자 거주",
     family: "가족과 함께",
-    dorm: "기숫사",
+    dorm: "기숙사",
     friends: "친구와 함께",
     military: "군대",
   }[livingSituation] || "";
 
   return (
-    <div className="min-h-screen p-6 bg-gray-50">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="mx-auto max-w-4xl">
         <div className="mb-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="mb-4 flex items-center justify-between">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => {
-                if (window.confirm("모의고사를 중단하시겠습니까? 진행 내용이 저장되지 않습니다.")) {
+                if (window.confirm("모의고사를 중단하시겠습니까? 진행 내용은 저장되지 않습니다.")) {
                   navigate("/mocktest/setup");
                 }
               }}
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex items-center gap-6">
               <div className="text-center">
@@ -156,12 +166,18 @@ export function MockTestQuestion() {
           <Progress value={totalProgress} className="h-2" />
         </div>
 
-        {/* Selected Options Summary */}
-        {(difficultyLabel || statusLabel || studentLabel || livingSituationLabel || selectedLeisure.length > 0 || selectedHobbies.length > 0 || selectedExercises.length > 0 || selectedTravel.length > 0) && (
+        {(difficultyLabel ||
+          statusLabel ||
+          studentLabel ||
+          livingSituationLabel ||
+          selectedLeisure.length > 0 ||
+          selectedHobbies.length > 0 ||
+          selectedExercises.length > 0 ||
+          selectedTravel.length > 0) && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-6 rounded-3xl bg-white p-4 shadow-sm border border-gray-200"
+            className="mb-6 rounded-3xl border border-gray-200 bg-white p-4 shadow-sm"
           >
             <div className="flex flex-wrap gap-2">
               {difficultyLabel && (
@@ -207,32 +223,36 @@ export function MockTestQuestion() {
             </div>
           </motion.div>
         )}
+
         <motion.div
           key={currentQuestion}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-4"
         >
-          <span className={`inline-block px-4 py-2 rounded-full text-sm font-semibold ${
-            currentQ.type === "자기소개" ? "bg-yellow-100 text-gray-900" :
-            currentQ.type === "롤플레잉" ? "bg-gray-200 text-gray-900" :
-            currentQ.type === "랜덤" ? "bg-gray-300 text-gray-900" :
-            "bg-yellow-200 text-gray-900"
-          }`}>
+          <span
+            className={`inline-block rounded-full px-4 py-2 text-sm font-semibold ${
+              currentQ.type === "자기소개"
+                ? "bg-yellow-100 text-gray-900"
+                : currentQ.type === "롤플레이"
+                  ? "bg-gray-200 text-gray-900"
+                  : currentQ.type === "랜덤"
+                    ? "bg-gray-300 text-gray-900"
+                    : "bg-yellow-200 text-gray-900"
+            }`}
+          >
             {currentQ.type}
           </span>
         </motion.div>
 
-        {/* Question Card */}
         <motion.div
           key={`question-${currentQuestion}`}
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           className="mb-6"
         >
-          <Card className="p-8 bg-yellow-50 border-2 border-yellow-200">
-            {/* Character */}
-            <div className="flex justify-center mb-6">
+          <Card className="border-2 border-yellow-200 bg-yellow-50 p-8">
+            <div className="mb-6 flex justify-center">
               <motion.div
                 animate={{
                   scale: isRecording ? [1, 1.05, 1] : 1,
@@ -241,93 +261,99 @@ export function MockTestQuestion() {
                   duration: 1,
                   repeat: isRecording ? Infinity : 0,
                 }}
-                className="w-24 h-24 rounded-full bg-yellow-400 flex items-center justify-center shadow-xl"
+                className="flex h-24 w-24 items-center justify-center rounded-full bg-yellow-400 shadow-xl"
               >
-                <span className="text-4xl">🎤</span>
+                <span className="text-4xl">🙂</span>
               </motion.div>
             </div>
 
-            {/* Question Text */}
             <div className="mb-4">
-              <p className="text-xl text-center text-gray-900 font-medium">
+              <p className="text-center text-xl font-medium text-gray-900">
                 {currentQ.text}
               </p>
             </div>
 
-            {/* Play Audio */}
             <div className="flex justify-center">
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => alert("음성 재생 기능 (추후 구현)")}
+                onClick={() => alert("음성 재생 기능은 추후 구현 예정입니다.")}
                 className="gap-2"
               >
-                <Volume2 className="w-4 h-4" />
+                <Volume2 className="h-4 w-4" />
                 질문 듣기
               </Button>
             </div>
           </Card>
         </motion.div>
 
-        {/* Recording Controls */}
-        <Card className="p-6 mb-6 bg-white">
-          <div className="flex justify-center gap-4 mb-4">
+        <Card className="mb-6 bg-white p-6">
+          <div className="mb-4 flex justify-center gap-4">
             {!isRecording ? (
               <Button
                 size="lg"
-                onClick={() => setIsRecording(true)}
-                className="bg-red-500 hover:bg-red-600 text-white gap-2"
+                onClick={startRecording}
+                disabled={isUploading}
+                className="gap-2 bg-red-500 text-white hover:bg-red-600"
               >
-                <Mic className="w-5 h-5" />
+                <Mic className="h-5 w-5" />
                 녹음 시작
               </Button>
             ) : (
               <Button
                 size="lg"
-                onClick={() => setIsRecording(false)}
+                onClick={() => stopRecording()}
                 variant="outline"
                 className="gap-2 border-red-500 text-red-500"
               >
-                <Square className="w-5 h-5" />
-                녹음 중지
+                <Square className="h-5 w-5" />
+                녹음 종료
               </Button>
             )}
           </div>
 
-          {/* Recording Timer */}
-          <div className="flex items-center justify-between gap-4 mb-4 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
+          {isUploading && (
+            <p className="mb-4 text-center text-sm text-gray-500">
+              음성을 STT 서버로 전송하고 있습니다...
+            </p>
+          )}
+
+          {error && (
+            <p className="mb-4 text-center text-sm text-red-500">
+              {error}
+            </p>
+          )}
+
+          <div className="mb-4 flex items-center justify-between gap-4 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
             <span className="font-medium text-gray-600">녹음 시간</span>
             <span className={`font-semibold ${recordingTime < 30 ? "text-red-500" : "text-gray-900"}`}>
               {formatTime(recordingTime)}
             </span>
           </div>
 
-          {/* Transcript */}
-          <div className="bg-gray-50 rounded-lg p-4 min-h-32">
-            <p className="text-sm text-gray-500 mb-2">음성 → 텍스트 변환 결과</p>
+          <div className="min-h-32 rounded-lg bg-gray-50 p-4">
+            <p className="mb-2 text-sm text-gray-500">음성 텍스트 변환 결과</p>
             <p className="text-gray-700">
               {transcript || "녹음을 시작하면 여기에 텍스트가 표시됩니다..."}
             </p>
           </div>
         </Card>
 
-        {/* Warning - No Hint in Mock Test */}
-        {currentQ.type !== "롤플레잉" && (
-          <Card className="p-4 mb-6 bg-yellow-50 border-yellow-200">
-            <div className="flex gap-3 items-start">
-              <AlertCircle className="w-5 h-5 text-gray-900 flex-shrink-0 mt-0.5" />
+        {currentQ.type !== "롤플레이" && (
+          <Card className="mb-6 border-yellow-200 bg-yellow-50 p-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-gray-900" />
               <p className="text-sm text-gray-700">
-                모의고사에서는 힌트 및 문제 저장 기능이 제공되지 않습니다.
+                모의고사에서는 힌트와 문제 저장 기능이 제공되지 않습니다.
               </p>
             </div>
           </Card>
         )}
 
-        {/* Next Button */}
         <Button
           size="lg"
           onClick={handleNext}
-          className="w-full bg-yellow-400 hover:bg-yellow-500 text-gray-900"
+          className="w-full bg-yellow-400 text-gray-900 hover:bg-yellow-500"
         >
           {currentQuestion < mockQuestions.length - 1 ? "다음 문제" : "시험 완료"}
         </Button>
