@@ -14,7 +14,7 @@ const currentStatuses = [
   { value: "company", label: "회사원" },
   { value: "remote", label: "재택근무" },
   { value: "teacher", label: "교사" },
-  { value: "unemployed", label: "무직" },
+  { value: "unemployed", label: "일 경험 없음" },
 ];
 
 const studentStatuses = [
@@ -32,79 +32,70 @@ const livingSituations = [
 
 const leisureActivities = [
   "영화",
-  "독서",
+  "뉴스",
   "공연",
   "콘서트",
-  "노래",
-  "방문관람",
+  "술집/바",
+  "백물관 관람",
   "공원",
   "캠핑",
-  "낚시",
-  "스포츠",
-  "주거",
+  "자원봉사",
+  "스포츠 관람",
+  "주거 개선",
   "요리",
   "게임",
   "SNS",
-  "운동",
+  "리얼리티쇼",
   "친구 연락",
-  "밴드",
-  "동아리",
-  "서핑",
-  "드라마",
+  "구직활동",
+  "클럽",
+  "차 드라이브",
+  "시험대비",
   "카페",
   "체스",
   "TV",
   "쇼핑",
-  "관람",
-  "여행",
+  "당구치기"
 ];
 
 const hobbyInterests = [
-  "노래",
-  "낚시",
-  "그림",
-  "뜨개질",
-  "사진",
-  "운동",
-  "수집",
-  "요리",
+  "음악 감상",
+  "사진 촬영",
+  "그림 그리기",
+  "주식 투자",
+  "춤추기",
   "독서",
-  "악기",
-  "요가",
-  "프라모델",
+  "책 읽어주기",
+  "애완동물 키우기",
+  "여행잡지/블로그",
+  "악기 연주",
+  "혼자 노래 부르기",
+  "신문 읽기",
 ];
 
 const exerciseActivities = [
   "농구",
   "골프",
-  "스노쿨",
-  "격투기",
+  "태권두",
+  "요가",
   "야구",
   "배구",
-  "스키",
-  "요가",
+  "스키/스노보드",
   "축구",
   "배드민턴",
   "아이스스케이트",
-  "낚시",
   "미식축구",
   "테니스",
-  "인라인스케이트",
-  "수상스키",
   "하이킹",
-  "럭비",
   "탁구",
-  "보트타기",
-  "아이스하키",
   "수영",
-  "승마",
+  "낚시",
   "헬스",
   "하키",
   "자전거",
   "조깅",
-  "체조",
-  "크리켓",
-  "오토바이",
+  "운동 수업 수강",
+  "크로켓",
   "걷기",
   "운동안함"
 ];
@@ -112,8 +103,8 @@ const exerciseActivities = [
 const travelExperiences = [
   "국내 출장",
   "해외 출장",
+  "집에서 보내는 휴가",
   "국내 여행",
-  "국내 가족 여행",
   "해외 여행",
 ];
 
@@ -148,15 +139,15 @@ export function MockTestSetup() {
     );
   };
 
+  const selectedTotalCount =
+    selectedLeisure.length + selectedHobbies.length + selectedExercises.length + selectedTravel.length;
+
   const canStart =
     difficulty &&
     currentStatus &&
     studentStatus &&
     livingSituation &&
-    selectedLeisure.length >= 2 &&
-    selectedHobbies.length > 0 &&
-    selectedExercises.length > 0 &&
-    selectedTravel.length > 0;
+    selectedTotalCount >= 12;
 
   const summaryItems = useMemo(
     () => [
@@ -204,6 +195,12 @@ export function MockTestSetup() {
                 <InfoItem label="취미 관심사" value={selectedHobbies.length > 0 ? selectedHobbies.join(", ") : "미선택"} />
                 <InfoItem label="운동" value={selectedExercises.length > 0 ? selectedExercises.join(", ") : "미선택"} />
                 <InfoItem label="휴가/출장" value={selectedTravel.length > 0 ? selectedTravel.join(", ") : "미선택"} />
+              </div>
+              <div className="text-center">
+                <p className="text-sm font-medium text-gray-900">여가활동, 취미 관심사, 운동, 휴가/출장 <br /> 4가지 항목에서 총 12개 골라주세요</p>
+                <span className="mx-auto mt-1 inline-flex items-center rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-gray-700 shadow-sm">
+                  현재 {selectedTotalCount}/12개 선택됨
+                </span>
               </div>
 
               <div className="mt-0">
@@ -386,7 +383,7 @@ export function MockTestSetup() {
                     </button>
                   ))}
                 </div>
-                <p className="text-sm text-gray-500 mt-1"> 추천 내용: 공연, 노래와 같이 유사한 주제 </p>
+                <p className="text-sm text-gray-500 mt-1"> 추천 내용: 공원, 캠핑과 같이 유사한 주제 </p>
               </Card>
 
               <Card className="bg-white p-6">
