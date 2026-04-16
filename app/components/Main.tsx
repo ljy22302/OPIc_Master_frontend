@@ -91,11 +91,15 @@ export function Main() {
             </div>
             <div className="rounded-lg bg-yellow-50 p-4">
               <p className="font-semibold text-gray-900">3. 추가 자료</p>
-              <p className="mt-1">필수 표현과 유용한 문장을 학습합니다.</p>
+              <p className="mt-1">필수 표현과 단어, 유용한 문장을 학습합니다.</p>
             </div>
             <div className="rounded-lg bg-yellow-50 p-4">
               <p className="font-semibold text-gray-900">4. 기록 확인</p>
               <p className="mt-1">학습 기록과 통계를 확인할 수 있습니다.</p>
+            </div>
+            <div className="rounded-lg bg-yellow-50 p-4">
+              <p className="font-semibold text-gray-900">5. 저장된 문제</p>
+              <p className="mt-1">이전 답변 확인, 복습 등에 활용할 수 있습니다.</p>
             </div>
           </div>
         </DialogContent>
