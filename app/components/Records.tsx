@@ -336,24 +336,25 @@ export function Records() {
                   &lt;
                 </Button>
                 <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-700">
-                  {monthLabels(visibleMonthNumber)} {visibleMonthYear}
+                  {visibleMonthYear} {monthLabels(visibleMonthNumber)}
                 </span>
                 <Button variant="outline" size="sm" onClick={handleNextMonth}>
                   &gt;
                 </Button>
               </div>
             </div>
-
-            <Card className="p-4 bg-gray-50 border border-gray-100">
-              <div className="flex items-center justify-between mb-4 gap-4">
+            <Card className="border border-gray-100 bg-gray-50 p-3 sm:p-4">
+              <div className="mb-3 flex items-center justify-between gap-3 sm:mb-4 sm:gap-4">
                 <div>
-                  <p className="text-sm text-gray-500">{monthLabels(visibleMonthNumber)}</p>
-                  <p className="text-xl font-bold text-gray-900">{visibleMonthTotalPractices}회 학습</p>
+                  <p className="text-lg font-bold text-gray-900 sm:text-xl">
+                    {visibleMonthTotalPractices}
+                    회 학습
+                  </p>
                 </div>
-                <p className="text-sm text-gray-600">{visibleMonthData.totalTime}</p>
+                <p className="text-xs text-gray-600 sm:text-sm">{visibleMonthData.totalTime}</p>
               </div>
 
-              <div className="grid grid-cols-7 gap-2 text-center mb-3">
+              <div className="mb-2 grid grid-cols-7 gap-1 text-center sm:mb-3 sm:gap-2">
                 {dayNames.map((day) => (
                   <div key={day} className="text-xs font-semibold text-gray-500">
                     {day}
@@ -361,11 +362,11 @@ export function Records() {
                 ))}
               </div>
 
-              <div className="grid grid-cols-7 gap-2">
+              <div className="grid grid-cols-7 gap-1 sm:gap-2">
                 {visibleMonthCalendar.map((cell, cellIndex) => (
                   <div
                     key={cellIndex}
-                    className={`min-h-[72px] rounded-2xl border p-2 text-left text-xs ${
+                    className={`min-h-[56px] rounded-xl border p-1.5 text-center text-[10px] sm:min-h-[72px] sm:rounded-2xl sm:p-2 sm:text-xs ${
                       cell === null
                         ? "bg-transparent border-transparent"
                         : cell.count >= 5
@@ -383,7 +384,9 @@ export function Records() {
                       <>
                         <div className="font-semibold">{cell.day}</div>
                         {cell.count > 0 && (
-                          <div className="mt-1 text-[10px] text-gray-700">{cell.count}회</div>
+                          <div className="mt-0.5 text-[9px] text-gray-700 sm:mt-1 sm:text-[10px]">
+                            {cell.count}회
+                          </div>
                         )}
                       </>
                     ) : (
