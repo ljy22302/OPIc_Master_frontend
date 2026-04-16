@@ -118,7 +118,7 @@ export function Main() {
               어떤 학습을 시작하시겠어요?
             </h2>
             <p className="text-lg text-gray-600">
-              원하는 모드를 선택하여 OPIc 스피킹 연습을 시작하세요
+              원하는 모드를 선택하여 OPIC 스피킹 연습을 시작하세요
             </p>
           </motion.div>
 

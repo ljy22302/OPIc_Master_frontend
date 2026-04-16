@@ -1,7 +1,7 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { motion } from "motion/react";
-import { ArrowLeft, Bookmark, FileText, Lightbulb, Mic, Volume2 } from "lucide-react";
+import { ArrowLeft, Bookmark, HelpCircle, Lightbulb, Mic, Volume2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import ossCharacter from "./OSS_character.png";
@@ -261,7 +261,7 @@ export function PracticeQuestion() {
               </div>
 
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
                 onClick={() => {
                   if (canPlayQuestion) {
@@ -278,13 +278,15 @@ export function PracticeQuestion() {
             </div>
 
             <div className="flex flex-col justify-start">
-              <div className="mb-4 grid min-h-[300px] grid-rows-2 gap-2">
+              <div className="mb-4 grid h-[210px] gap-3 sm:h-[300px] sm:grid-rows-[3fr_2fr] sm:gap-3">
                 <button
                   type="button"
                   onClick={() => {
                     setShowQuestion((prev) => !prev);
-                  }}>
-                  <div className="flex h-full w-full items-center justify-center rounded-xl border border-gray-300 bg-white px-4 text-center">
+                  }}
+                  className="h-full w-full"
+                >
+                  <div className="flex h-full w-full items-center justify-center rounded-md border border-yellow-100 bg-yellow-50 px-2 py-3 text-center shadow-md transition hover:bg-yellow-100 hover:shadow-lg sm:rounded-xl sm:px-4 sm:py-0">
                     {showQuestion ? (
                       <motion.div
                         key={`question-${currentQuestion}`}
@@ -292,12 +294,15 @@ export function PracticeQuestion() {
                         animate={{ opacity: 1, y: 0 }}
                         className="text-left"
                       >
-                        <p className="text-lg font-medium leading-relaxed text-center text-gray-900">
+                        <p className="text-base font-medium leading-snug text-center text-gray-900 sm:text-lg sm:leading-relaxed">
                           {questions[currentQuestion].text}
                         </p>
                       </motion.div>
                     ) : (
-                      <span className="text-2xl font-semimedium text-gray-900">Show Question</span>
+                      <span className="inline-flex items-center gap-2 text-base font-semibold text-yellow-900 sm:text-2xl">
+                        <HelpCircle className="h-4 w-4 shrink-0" />
+                        Show Question
+                      </span>
                     )}
                   </div>
                 </button>
@@ -306,8 +311,10 @@ export function PracticeQuestion() {
                   type="button"
                   onClick={() => {
                     setShowHint((prev) => !prev);
-                  }}>
-                  <div className="flex h-full w-full items-center justify-center rounded-xl border border-gray-300 bg-white px-4 text-center">
+                  }}
+                  className="h-full w-full"
+                >
+                  <div className="flex h-full w-full items-center justify-center rounded-md border border-sky-100 bg-sky-50 px-2 py-3 text-center shadow-md transition hover:bg-sky-100 hover:shadow-lg sm:rounded-xl sm:px-4 sm:py-0">
                     {showHint ? (
                       <motion.div
                         key={`hint-${currentQuestion}`}
@@ -315,12 +322,15 @@ export function PracticeQuestion() {
                         animate={{ opacity: 1, y: 0 }}
                         className="text-left"
                       >
-                        <p className="text-lg font-medium leading-relaxed text-gray-700">
+                        <p className="text-base font-medium leading-snug text-gray-700 sm:text-lg sm:leading-relaxed">
                           {questions[currentQuestion].hint}
                         </p>
                       </motion.div>
                     ) : (
-                      <span className="text-2xl font-semimedium text-gray-900">Word Hint</span>
+                      <span className="inline-flex items-center gap-2 text-base font-semibold text-sky-900 sm:text-2xl">
+                        <Lightbulb className="h-4 w-4 shrink-0" />
+                        Word Hint
+                      </span>
                     )}
                   </div>
                 </button>
