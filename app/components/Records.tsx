@@ -455,15 +455,14 @@ export function Records() {
         </motion.div>
       </div>
 
-      <Button
+      <button
         type="button"
-        size="icon"
         onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-        className="fixed bottom-6 right-6 z-50 h-12 w-12 rounded-full bg-yellow-400 text-gray-900 shadow-lg hover:bg-yellow-500"
+        className="fixed bottom-4 right-4 z-30 inline-flex items-center gap-2 rounded-full border border-yellow-300 bg-white px-4 py-3 text-sm font-semibold text-gray-900 shadow-lg transition hover:bg-yellow-50"
         aria-label="맨 위로 이동"
       >
-        <ArrowUp className="h-5 w-5" />
-      </Button>
+        <ArrowUp className="h-4 w-4" />
+      </button>
     </div>
   );
 }
