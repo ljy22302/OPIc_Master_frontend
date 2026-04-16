@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "motion/react";
-import { ArrowLeft, Bookmark, BookOpen, MessageSquare } from "lucide-react";
+import { ArrowLeft, ArrowUp, Bookmark, BookOpen, MessageSquare } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
@@ -319,6 +319,10 @@ export function Resources() {
   const [savedWords, setSavedWords] = useState<string[]>([]);
   const [expandedTip, setExpandedTip] = useState<number | null>(null);
 
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const toggleSavedPhrase = (phrase: string) => {
     setSavedPhrases((prev) => (prev.includes(phrase) ? prev.filter((item) => item !== phrase) : [...prev, phrase]));
   };
@@ -499,6 +503,15 @@ export function Resources() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <button
+        type="button"
+        onClick={scrollToTop}
+        className="fixed bottom-4 right-4 z-30 inline-flex items-center gap-2 rounded-full border border-yellow-300 bg-white px-4 py-3 text-sm font-semibold text-gray-900 shadow-lg transition hover:bg-yellow-50"
+        aria-label="맨 위로 이동"
+      >
+        <ArrowUp className="h-4 w-4" />
+      </button>
     </div>
   );
 }
