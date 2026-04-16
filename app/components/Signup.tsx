@@ -102,7 +102,7 @@ export function Signup() {
         >
           <div className="mb-8 text-center">
             <h1 className="text-4xl font-bold text-gray-900">회원가입</h1>
-            <p className="mt-3 text-gray-600">회원 정보를 입력해서 다양한 OPIC 연습 경험을 만들어보세요.</p>
+            <p className="mt-3 text-gray-600">회원 정보를 입력해서 다양한 OPIc 연습 경험을 만들어보세요.</p>
           </div>
 
           <Card className="border-2 border-yellow-200 bg-white p-6 shadow-xl md:p-8">

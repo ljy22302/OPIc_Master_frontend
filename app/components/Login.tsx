@@ -57,7 +57,7 @@ export function Login() {
         >
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold text-gray-900 mb-2">OSP</h1>
-            <p className="text-gray-600">Opic Speaking Practice</p>
+            <p className="text-gray-600">OPIc Speaking Practice</p>
           </div>
 
           <Card className="p-8 bg-white border-2 border-yellow-200 shadow-lg mb-6">
