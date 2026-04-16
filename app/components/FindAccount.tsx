@@ -288,8 +288,8 @@ export function FindAccount() {
           transition={{ duration: 0.5 }}
         >
           <div className="mb-10 text-center">
-            <h1 className="text-4xl font-bold text-gray-900">OPIC</h1>
-            <p className="mt-3 text-lg text-gray-600">영어 말하기 실력 향상 연습</p>
+            <h1 className="text-4xl font-bold text-gray-900">OSP</h1>
+            <p className="mt-3 text-lg text-gray-600">Opic Speaking Practice</p>
           </div>
 
           <div className="mb-6 flex justify-start">

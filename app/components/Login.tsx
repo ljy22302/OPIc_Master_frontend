@@ -56,8 +56,8 @@ export function Login() {
           transition={{ duration: 0.5 }}
         >
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">OPIC</h1>
-            <p className="text-gray-600">영어 말하기 실력 향상</p>
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">OSP</h1>
+            <p className="text-gray-600">Opic Speaking Practice</p>
           </div>
 
           <Card className="p-8 bg-white border-2 border-yellow-200 shadow-lg mb-6">
@@ -139,16 +139,6 @@ export function Login() {
               >
                 회원가입
               </Button>
-            </div>
-
-            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <p className="text-xs font-semibold text-gray-700 mb-2">테스트 계정</p>
-              <p className="text-xs text-gray-600 mb-1">
-                <span className="font-semibold">이메일:</span> test@example.com
-              </p>
-              <p className="text-xs text-gray-600">
-                <span className="font-semibold">비밀번호:</span> test1234
-              </p>
             </div>
           </Card>
 
