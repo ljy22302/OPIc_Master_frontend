@@ -1,7 +1,16 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { motion } from "motion/react";
-import { ArrowLeft, Bookmark, HelpCircle, Lightbulb, Mic, Volume2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Bookmark,
+  HelpCircle,
+  Lightbulb,
+  Mic,
+  Square,
+  Volume2,
+} from "lucide-react";
+import { useSpeechToTextRecorder } from "../hooks/useSpeechToTextRecorder";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import ossCharacter from "./OSS_character.png";
@@ -69,21 +78,18 @@ function PlaceholderImage() {
 export function PracticeQuestion() {
   const recordingLimit = 120;
   const navigate = useNavigate();
+  const location = useLocation();
+
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [timeLeft, setTimeLeft] = useState(recordingLimit);
-  const [recordingState, setRecordingState] = useState<"idle" | "recording" | "completed">(
-    "idle"
-  );
   const [showQuestion, setShowQuestion] = useState(false);
   const [showHint, setShowHint] = useState(false);
-  const [transcript] = useState("");
   const [playCount, setPlayCount] = useState(0);
   const [transitionPhase, setTransitionPhase] = useState<TransitionPhase>(null);
   const [transitionAction, setTransitionAction] = useState<TransitionAction>(null);
   const [transitionMessage, setTransitionMessage] = useState("");
   const [imageError, setImageError] = useState(false);
 
-  const location = useLocation();
   const {
     difficultyLabel = "",
     selectedType = "",
@@ -97,16 +103,29 @@ export function PracticeQuestion() {
       selectedTopicLabels?: string[];
     }) ?? {};
 
+  const {
+    error,
+    isRecording,
+    isUploading,
+    resetTranscript,
+    startRecording,
+    stopRecording,
+    transcript,
+  } = useSpeechToTextRecorder({
+    questionId: `practice-${questions[currentQuestion].id}`,
+    language: "en",
+  });
+
   const questionLimit = selectedType === "random" ? 2 : questions.length;
 
   useEffect(() => {
-    if (recordingState !== "recording") {
+    if (!isRecording) {
       return;
     }
 
     const timer = setTimeout(() => setTimeLeft((prev) => prev - 1), 1000);
     return () => clearTimeout(timer);
-  }, [recordingState, timeLeft]);
+  }, [isRecording, timeLeft]);
 
   useEffect(() => {
     if (!transitionPhase) {
@@ -117,7 +136,7 @@ export function PracticeQuestion() {
       if (transitionPhase === "saving") {
         setTransitionPhase("preparing");
         setTransitionMessage(
-          transitionAction === "result" ? "결과 분석 중" : "다음 문제 준비 중"
+          transitionAction === "result" ? "Preparing your result..." : "Preparing the next question..."
         );
         return;
       }
@@ -126,10 +145,11 @@ export function PracticeQuestion() {
         if (currentQuestion < questionLimit - 1) {
           setCurrentQuestion((prev) => prev + 1);
           setTimeLeft(recordingLimit);
-          setRecordingState("idle");
           setShowQuestion(false);
           setShowHint(false);
           setPlayCount(0);
+          resetTranscript();
+          stopRecording(true);
         } else {
           navigate("/practice/result", {
             state: {
@@ -153,14 +173,14 @@ export function PracticeQuestion() {
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [transitionAction, transitionPhase, currentQuestion, navigate, questionLimit, recordingLimit]);
+  }, [transitionAction, transitionPhase, currentQuestion, navigate, questionLimit, recordingLimit, resetTranscript, selectedType, stopRecording]);
 
   const displayTypeText = useMemo(() => {
     if (!selectedTypeLabel) {
       return "";
     }
 
-    if (selectedTypeLabel === "二쇱젣?좏깮遺꾩빞" && selectedTopicLabels[0]) {
+    if (selectedTypeLabel === "콤보형 문제유형" && selectedTopicLabels[0]) {
       return `${selectedTypeLabel} - ${selectedTopicLabels[0]}`;
     }
 
@@ -169,7 +189,7 @@ export function PracticeQuestion() {
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
+    const secs = Math.abs(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
@@ -190,8 +210,21 @@ export function PracticeQuestion() {
     100
   );
   const isOvertime = timeLeft < 0;
-
   const canPlayQuestion = playCount < 2;
+
+  const handleRecordingToggle = async () => {
+    if (isUploading) {
+      return;
+    }
+
+    if (!isRecording) {
+      setTimeLeft(recordingLimit);
+      await startRecording();
+      return;
+    }
+
+    stopRecording();
+  };
 
   const handleNext = () => {
     if (transitionPhase) {
@@ -199,7 +232,7 @@ export function PracticeQuestion() {
     }
 
     setTransitionAction(currentQuestion < questionLimit - 1 ? "next" : "result");
-    setTransitionMessage("답변 저장 중");
+    setTransitionMessage("Saving your answer...");
     setTransitionPhase("saving");
   };
 
@@ -274,16 +307,14 @@ export function PracticeQuestion() {
                 <Volume2 className="h-4 w-4" />
                 Play Question
               </Button>
-              <p className="mt-1 text-center text-xs text-gray-500">2번 듣기 가능</p>
+              <p className="mt-1 text-center text-xs text-gray-500">Up to 2 plays</p>
             </div>
 
             <div className="flex flex-col justify-start">
               <div className="mb-4 grid h-[210px] gap-3 sm:h-[300px] sm:grid-rows-[3fr_2fr] sm:gap-3">
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowQuestion((prev) => !prev);
-                  }}
+                  onClick={() => setShowQuestion((prev) => !prev)}
                   className="h-full w-full"
                 >
                   <div className="flex h-full w-full items-center justify-center rounded-md border border-yellow-100 bg-yellow-50 px-2 py-3 text-center shadow-md transition hover:bg-yellow-100 hover:shadow-lg sm:rounded-xl sm:px-4 sm:py-0">
@@ -294,7 +325,7 @@ export function PracticeQuestion() {
                         animate={{ opacity: 1, y: 0 }}
                         className="text-left"
                       >
-                        <p className="text-base font-medium leading-snug text-center text-gray-900 sm:text-lg sm:leading-relaxed">
+                        <p className="text-center text-base font-medium leading-snug text-gray-900 sm:text-lg sm:leading-relaxed">
                           {questions[currentQuestion].text}
                         </p>
                       </motion.div>
@@ -309,9 +340,7 @@ export function PracticeQuestion() {
 
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowHint((prev) => !prev);
-                  }}
+                  onClick={() => setShowHint((prev) => !prev)}
                   className="h-full w-full"
                 >
                   <div className="flex h-full w-full items-center justify-center rounded-md border border-sky-100 bg-sky-50 px-2 py-3 text-center shadow-md transition hover:bg-sky-100 hover:shadow-lg sm:rounded-xl sm:px-4 sm:py-0">
@@ -341,25 +370,28 @@ export function PracticeQuestion() {
 
         <Card className="mb-6 mt-6 bg-white p-6">
           <div className="mb-4 flex justify-center">
-              <Button
-                size="lg"
-                onClick={() => {
-                  if (recordingState === "idle") {
-                    setRecordingState("recording");
-                    return;
-                  }
-
-                  if (recordingState === "recording") {
-                    setRecordingState("completed");
-                  }
-                }}
-                disabled={recordingState === "completed"}
-                className="gap-2 bg-red-500 text-white hover:bg-red-600 disabled:opacity-70"
-              >
-                <Mic className="h-5 w-5" />
-                {recordingState === "recording" ? "답변완료" : "Start Recording"}
-              </Button>
+            <Button
+              size="lg"
+              onClick={handleRecordingToggle}
+              disabled={isUploading}
+              className="gap-2 bg-red-500 text-white hover:bg-red-600 disabled:opacity-70"
+            >
+              {isRecording ? <Square className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+              {isRecording ? "Stop Recording" : "Start Recording"}
+            </Button>
           </div>
+
+          {isUploading && (
+            <p className="mb-4 text-center text-sm text-gray-500">
+              Sending your audio to the STT server...
+            </p>
+          )}
+
+          {error && (
+            <p className="mb-4 text-center text-sm text-red-500">
+              {error}
+            </p>
+          )}
 
           <div className="mb-4 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3">
             <div className="mb-2 flex items-center justify-between gap-4 text-sm text-gray-700">
@@ -424,7 +456,7 @@ export function PracticeQuestion() {
                 {transitionMessage}
               </p>
               <p className="mt-3 text-center text-sm text-gray-600">
-                잠시만 기다려 주세요.
+                Please wait a moment.
               </p>
             </motion.div>
           </div>

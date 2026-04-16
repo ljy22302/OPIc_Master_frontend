@@ -1,7 +1,8 @@
-﻿import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { motion } from "motion/react";
-import { ArrowLeft, Mic, Square, Volume2, AlertCircle } from "lucide-react";
+import { AlertCircle, ArrowLeft, Mic, Square, Volume2 } from "lucide-react";
+import { useSpeechToTextRecorder } from "../hooks/useSpeechToTextRecorder";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Progress } from "./ui/progress";
@@ -29,6 +30,7 @@ export function MockTestQuestion() {
   const recordingLimit = 120;
   const navigate = useNavigate();
   const location = useLocation();
+
   const {
     difficulty = "",
     currentStatus = "",
@@ -52,20 +54,29 @@ export function MockTestQuestion() {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [totalTime, setTotalTime] = useState(2400);
   const [recordingTime, setRecordingTime] = useState(recordingLimit);
-  const [transcript, setTranscript] = useState("");
   const [playCount, setPlayCount] = useState(0);
-  const [recordingState, setRecordingState] = useState<"idle" | "recording" | "completed">(
-    "idle"
-  );
+
+  const {
+    error,
+    isRecording,
+    isUploading,
+    resetTranscript,
+    startRecording,
+    stopRecording,
+    transcript,
+  } = useSpeechToTextRecorder({
+    questionId: `mock-test-${mockQuestions[currentQuestion].id}`,
+    language: "en",
+  });
 
   useEffect(() => {
-    if (recordingState !== "recording") {
+    if (!isRecording) {
       return;
     }
 
     const timer = setTimeout(() => setRecordingTime((prev) => prev - 1), 1000);
     return () => clearTimeout(timer);
-  }, [recordingState, recordingTime]);
+  }, [isRecording, recordingTime]);
 
   useEffect(() => {
     if (totalTime > 0) {
@@ -76,7 +87,7 @@ export function MockTestQuestion() {
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
+    const secs = Math.abs(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
@@ -99,19 +110,6 @@ export function MockTestQuestion() {
   );
   const isOvertime = recordingTime < 0;
   const progressSteps = Array.from({ length: mockQuestions.length }, (_, index) => index + 1);
-
-  const handleNext = () => {
-    if (currentQuestion < mockQuestions.length - 1) {
-      setCurrentQuestion((prev) => prev + 1);
-      setRecordingTime(recordingLimit);
-      setTranscript("");
-      setPlayCount(0);
-      setRecordingState("idle");
-    } else {
-      navigate("/mocktest/result");
-    }
-  };
-
   const currentQ = mockQuestions[currentQuestion];
 
   const difficultyLabel = difficulty === "3-4" ? "Level 3-4" : difficulty === "5-6" ? "Level 5-6" : "";
@@ -132,6 +130,32 @@ export function MockTestQuestion() {
     friends: "With Friends",
     military: "Military",
   }[livingSituation] || "";
+
+  const handleRecordingToggle = async () => {
+    if (isUploading) {
+      return;
+    }
+
+    if (!isRecording) {
+      setRecordingTime(recordingLimit);
+      await startRecording();
+      return;
+    }
+
+    stopRecording();
+  };
+
+  const handleNext = () => {
+    if (currentQuestion < mockQuestions.length - 1) {
+      setCurrentQuestion((prev) => prev + 1);
+      setRecordingTime(recordingLimit);
+      setPlayCount(0);
+      resetTranscript();
+      stopRecording(true);
+    } else {
+      navigate("/mocktest/result");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -165,7 +189,14 @@ export function MockTestQuestion() {
           <Progress value={totalProgress} className="h-2" />
         </div>
 
-        {(difficultyLabel || statusLabel || studentLabel || livingSituationLabel || selectedLeisure.length > 0 || selectedHobbies.length > 0 || selectedExercises.length > 0 || selectedTravel.length > 0) && (
+        {(difficultyLabel ||
+          statusLabel ||
+          studentLabel ||
+          livingSituationLabel ||
+          selectedLeisure.length > 0 ||
+          selectedHobbies.length > 0 ||
+          selectedExercises.length > 0 ||
+          selectedTravel.length > 0) && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -216,8 +247,6 @@ export function MockTestQuestion() {
           </motion.div>
         )}
 
-
-
         <motion.div
           key={`question-${currentQuestion}`}
           initial={{ opacity: 0, scale: 0.95 }}
@@ -251,30 +280,31 @@ export function MockTestQuestion() {
                   <Volume2 className="h-4 w-4" />
                   Play Question
                 </Button>
-                <p className="mt-1 text-center text-xs text-gray-500">2번 듣기 가능</p>
+                <p className="mt-1 text-center text-xs text-gray-500">Up to 2 plays</p>
               </div>
 
               <div className="flex flex-col justify-center">
                 <motion.div
-                key={currentQuestion}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mb-4">
-                  <span
-                  className={`inline-block rounded-full px-4 py-2 text-sm font-semibold ${
-                  currentQ.type === "Self-Intro"
-                  ? "bg-yellow-100 text-gray-900"
-                  : currentQ.type === "Role Play"
-                  ? "bg-gray-200 text-gray-900"
-                  : currentQ.type === "Follow-up"
-                  ? "bg-gray-300 text-gray-900"
-                  : "bg-yellow-200 text-gray-900"
-                }`}
+                  key={currentQuestion}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-4"
                 >
-                {currentQ.type}
-                </span>
+                  <span
+                    className={`inline-block rounded-full px-4 py-2 text-sm font-semibold ${
+                      currentQ.type === "Self-Intro"
+                        ? "bg-yellow-100 text-gray-900"
+                        : currentQ.type === "Role Play"
+                          ? "bg-gray-200 text-gray-900"
+                          : currentQ.type === "Follow-up"
+                            ? "bg-gray-300 text-gray-900"
+                            : "bg-yellow-200 text-gray-900"
+                    }`}
+                  >
+                    {currentQ.type}
+                  </span>
                 </motion.div>
-                <p className="mb-3 text-sm font-semibold text-gray-700">진행 상태</p>
+                <p className="mb-3 text-sm font-semibold text-gray-700">Progress</p>
                 <div className="grid grid-cols-5 gap-2 sm:grid-cols-10 lg:grid-cols-10">
                   {progressSteps.map((step) => {
                     const isCurrent = step === currentQuestion + 1;
@@ -292,6 +322,9 @@ export function MockTestQuestion() {
                     );
                   })}
                 </div>
+                <p className="mt-6 text-lg font-medium leading-relaxed text-gray-900">
+                  {currentQ.text}
+                </p>
               </div>
             </div>
           </Card>
@@ -301,27 +334,26 @@ export function MockTestQuestion() {
           <div className="mb-4 flex justify-center gap-4">
             <Button
               size="lg"
-              onClick={() => {
-                if (recordingState === "idle") {
-                  setRecordingState("recording");
-                  return;
-                }
-
-                if (recordingState === "recording") {
-                  setRecordingState("completed");
-                }
-              }}
-              disabled={recordingState === "completed"}
+              onClick={handleRecordingToggle}
+              disabled={isUploading}
               className="gap-2 bg-red-500 text-white hover:bg-red-600 disabled:opacity-70"
             >
-              {recordingState === "recording" ? (
-                <Square className="h-5 w-5" />
-              ) : (
-                <Mic className="h-5 w-5" />
-              )}
-              {recordingState === "recording" ? "답변 완료" : "Start Recording"}
+              {isRecording ? <Square className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+              {isRecording ? "Stop Recording" : "Start Recording"}
             </Button>
           </div>
+
+          {isUploading && (
+            <p className="mb-4 text-center text-sm text-gray-500">
+              Sending your audio to the STT server...
+            </p>
+          )}
+
+          {error && (
+            <p className="mb-4 text-center text-sm text-red-500">
+              {error}
+            </p>
+          )}
 
           <div className="mb-4 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3">
             <div className="mb-2 flex items-center justify-between gap-4 text-sm text-gray-700">
