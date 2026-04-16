@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "motion/react";
-import { ArrowLeft, Mail, Briefcase, GamepadIcon, Tent, Calendar, ShoppingBag, Film, Sun, TreePine, ArrowRight, Coffee, Plane, Dumbbell, Home, Utensils, Music } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 
 const difficulties = [
-  { value: "3-4", label: "Level 3-4", description: "초급~중급" },
-  { value: "5-6", label: "Level 5-6", description: "중급~고급" },
+  { value: "3-4", label: "Level 3-4", description: "~IM3" },
+  { value: "5-6", label: "Level 5-6", description: "IM3~AL" },
 ];
 
 const types = [
@@ -17,40 +17,40 @@ const types = [
 ];
 
 const topics = [
-  { id: "performance", label: "공연", icon: Music },
-  { id: "domestic_travel", label: "국내여행", icon: Plane },
-  { id: "cafe", label: "카페", icon: Coffee },
-  { id: "exercise", label: "운동", icon: Dumbbell },
-  { id: "home", label: "집", icon: Home },
-  { id: "cooking", label: "요리", icon: Utensils },
-  { id: "camping", label: "캠핑", icon: Tent },
-  { id: "jogging_walking", label: "조깅/산책", icon: Dumbbell },
-  { id: "housing", label: "사는 지역", icon: Home },
-  { id: "abroad", label: "해외여행", icon: Plane },
-  { id: "holiday", label: "휴일", icon: Calendar },
-  { id: "neighbor", label: "이웃", icon: Home },
-  { id: "drinking_bar", label: "술집", icon: Coffee },
-  { id: "music", label: "음악", icon: Music },
-  { id: "game", label: "게임", icon: GamepadIcon },
-  { id: "beach", label: "해변", icon: Sun },
-  { id: "park", label: "공원", icon: TreePine },
-  { id: "mountain", label: "산", icon: TreePine },
-  { id: "shopping", label: "쇼핑", icon: ShoppingBag },
-  { id: "movie", label: "영화", icon: Film },
-  { id: "job", label: "구직", icon: Briefcase },
-  { id: "SNS", label: "SNS", icon: Mail }
+  { id: "performance", label: "공연" },
+  { id: "domestic_travel", label: "국내여행" },
+  { id: "cafe", label: "카페" },
+  { id: "exercise", label: "운동" },
+  { id: "home", label: "집" },
+  { id: "cooking", label: "요리" },
+  { id: "camping", label: "캠핑" },
+  { id: "jogging_walking", label: "조깅/산책" },
+  { id: "housing", label: "사는 지역" },
+  { id: "abroad", label: "해외여행" },
+  { id: "holiday", label: "휴일" },
+  { id: "neighbor", label: "이웃" },
+  { id: "drinking_bar", label: "술집" },
+  { id: "music", label: "음악" },
+  { id: "game", label: "게임" },
+  { id: "beach", label: "해변" },
+  { id: "park", label: "공원" },
+  { id: "mountain", label: "산" },
+  { id: "shopping", label: "쇼핑" },
+  { id: "movie", label: "영화" },
+  { id: "job", label: "구직" },
+  { id: "SNS", label: "SNS" }
 ];
 
 export function PracticeSetup() {
   const navigate = useNavigate();
   const [difficulty, setDifficulty] = useState("");
   const [selectedType, setSelectedType] = useState("");
-  const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
+  const [selectedTopic, setSelectedTopic] = useState("");
 
   const toggleType = (typeValue: string) => {
     setSelectedType(typeValue);
     if (typeValue !== "topics") {
-      setSelectedTopics([]);
+      setSelectedTopic("");
     }
   };
 
@@ -58,18 +58,13 @@ export function PracticeSetup() {
     if (selectedType !== "topics") {
       return;
     }
-
-    setSelectedTopics((prev) =>
-      prev.includes(topicId)
-        ? prev.filter((t) => t !== topicId)
-        : [...prev, topicId]
-    );
+    setSelectedTopic(topicId);
   };
 
   const canStart =
     difficulty &&
     selectedType &&
-    (selectedType !== "topics" || selectedTopics.length > 0);
+    (selectedType !== "topics" || selectedTopic.length > 0);
 
   return (
     <div className="min-h-screen p-6 bg-gray-50">
@@ -156,17 +151,11 @@ export function PracticeSetup() {
             className="mb-8"
           >
           <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            3. 주제 선택 <span className="text-sm text-gray-500">(복수 선택 가능)</span>
+            3. 주제 선택
           </h2>
-          {selectedType !== "topics" && (
-            <p className="mb-4 text-sm text-gray-500">
-              주제선택분야 유형을 선택한 경우에만 주제 선택이 활성화됩니다.
-            </p>
-          )}
-          <div className={`grid md:grid-cols-3 gap-4 ${selectedType !== "topics" ? "opacity-50" : ""}`}>
+          <div className={`grid grid-cols-2 md:grid-cols-3 gap-y-4 gap-x-2 md:gap-x-3 ${selectedType !== "topics" ? "opacity-50" : ""}`}>
             {topics.map((topic) => {
-              const Icon = topic.icon;
-              const isSelected = selectedTopics.includes(topic.id);
+              const isSelected = selectedTopic === topic.id;
               return (
                 <Card
                   key={topic.id}
@@ -177,17 +166,8 @@ export function PracticeSetup() {
                   } ${selectedType !== "topics" ? "cursor-not-allowed" : "cursor-pointer"}`}
                   onClick={() => toggleTopic(topic.id)}
                 >
-                  <div className="flex flex-col items-center gap-3">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                        isSelected ? "bg-yellow-400" : "bg-gray-200"
-                      }`}
-                    >
-                      <Icon className={`w-6 h-6 ${
-                          isSelected ? "text-gray-900" : "text-gray-600"
-                        }`}
-                      />
-                    </div>
-                    <span className="font-semibold text-gray-900">
+                  <div className="flex items-center justify-center">
+                    <span className="text-base font-semibold text-gray-900">
                       {topic.label}
                     </span>
                   </div>
@@ -204,7 +184,7 @@ export function PracticeSetup() {
             먼저 연습 유형을 선택해주세요.
           </p>
         )}
-        {selectedType === "topics" && selectedTopics.length === 0 && (
+        {selectedType === "topics" && !selectedTopic && (
           <p className="text-sm text-gray-500 mb-4">
             주제선택분야 유형을 선택하면 아래에서 주제를 골라주세요.
           </p>
@@ -220,9 +200,9 @@ export function PracticeSetup() {
             onClick={() => {
               const difficultyLabel = difficulties.find((diff) => diff.value === difficulty)?.label || "";
               const selectedTypeLabel = types.find((type) => type.value === selectedType)?.label || "";
-              const selectedTopicLabels = selectedTopics.map(
-                (topicId) => topics.find((topic) => topic.id === topicId)?.label || topicId
-              );
+              const selectedTopicLabels = selectedTopic
+                ? [topics.find((topic) => topic.id === selectedTopic)?.label || selectedTopic]
+                : [];
 
               navigate("/practice/question", {
                 state: {

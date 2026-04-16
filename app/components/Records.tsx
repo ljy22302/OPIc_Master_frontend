@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "motion/react";
-import { ArrowLeft, TrendingUp, Calendar, Award, Target, Clock, BarChart3 } from "lucide-react";
+import { ArrowLeft, ArrowUp, TrendingUp, Calendar, Award, Target, Clock, BarChart3 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Progress } from "./ui/progress";
@@ -76,15 +76,30 @@ const getMonthStartsOn = (year: number, month: number) => new Date(year, month -
 
 type CalendarCell = { day: number; count: number } | null;
 
+type MonthlyActivity = {
+  totalPractices: number;
+  totalMockTests: number;
+  totalTime: string;
+  weekCounts: number[];
+  dayOverrides?: Record<number, number>;
+};
+
 const getCountsByDay = (weekCounts: number[], dayCount: number) =>
   Array.from({ length: dayCount }, (_, index) =>
-    weekCounts[Math.min(Math.floor(index / 7), weekCounts.length - 1)] ?? 0
+    (() => {
+      const weekCount = weekCounts[Math.min(Math.floor(index / 7), weekCounts.length - 1)] ?? 0;
+      const dayIndexInWeek = index % 7;
+      return dayIndexInWeek < weekCount ? 1 : 0;
+    })()
   );
+
+const getMonthlyTotal = (calendar: CalendarCell[]) =>
+  calendar.reduce((sum, cell) => sum + (cell?.count ?? 0), 0);
 
 const getCalendarDays = (
   year: number,
   month: number,
-  activity: { totalPractices: number; totalMockTests: number; totalTime: string; weekCounts: number[] }
+  activity: MonthlyActivity
 ): CalendarCell[] => {
   const today = new Date();
   const isCurrentMonth = year === today.getFullYear() && month === today.getMonth() + 1;
@@ -99,6 +114,13 @@ const getCalendarDays = (
         return {
           day,
           count: 0,
+        } as CalendarCell;
+      }
+      const overrideCount = monthlyDayOverrides[month]?.[day];
+      if (typeof overrideCount === "number") {
+        return {
+          day,
+          count: overrideCount,
         } as CalendarCell;
       }
       return ({
@@ -124,6 +146,10 @@ const monthlyActivityData: Record<number, { totalPractices: number; totalMockTes
   12: { totalPractices: 14, totalMockTests: 2, totalTime: "11시간 30분", weekCounts: [3, 4, 4, 3] },
 };
 
+const monthlyDayOverrides: Record<number, Record<number, number>> = {
+  4: { 11: 5, 15: 4 },
+};
+
 export function Records() {
   const navigate = useNavigate();
   const now = new Date();
@@ -132,6 +158,7 @@ export function Records() {
   const visibleMonthYear = visibleMonthDate.getFullYear();
   const visibleMonthData = monthlyActivityData[visibleMonthNumber];
   const visibleMonthCalendar = getCalendarDays(visibleMonthYear, visibleMonthNumber, visibleMonthData);
+  const visibleMonthTotalPractices = getMonthlyTotal(visibleMonthCalendar);
   const dayNames = ["일", "월", "화", "수", "목", "금", "토"];
 
   const handlePrevMonth = () => {
@@ -303,31 +330,31 @@ export function Records() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
               <div>
                 <h3 className="text-lg font-bold text-gray-900">월간 학습 활동</h3>
-                <p className="text-sm text-gray-500">현재 월을 확인하고 좌우 버튼으로 월을 이동하세요.</p>
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={handlePrevMonth}>
                   &lt;
                 </Button>
                 <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-700">
-                  {monthLabels(visibleMonthNumber)} {visibleMonthYear}
+                  {visibleMonthYear} {monthLabels(visibleMonthNumber)}
                 </span>
                 <Button variant="outline" size="sm" onClick={handleNextMonth}>
                   &gt;
                 </Button>
               </div>
             </div>
-
-            <Card className="p-4 bg-gray-50 border border-gray-100">
-              <div className="flex items-center justify-between mb-4 gap-4">
+            <Card className="border border-gray-100 bg-gray-50 p-3 sm:p-4">
+              <div className="mb-3 flex items-center justify-between gap-3 sm:mb-4 sm:gap-4">
                 <div>
-                  <p className="text-sm text-gray-500">{monthLabels(visibleMonthNumber)}</p>
-                  <p className="text-xl font-bold text-gray-900">{visibleMonthData.totalPractices}회 학습</p>
+                  <p className="text-lg font-bold text-gray-900 sm:text-xl">
+                    {visibleMonthTotalPractices}
+                    회 학습
+                  </p>
                 </div>
-                <p className="text-sm text-gray-600">{visibleMonthData.totalTime}</p>
+                <p className="text-xs text-gray-600 sm:text-sm">{visibleMonthData.totalTime}</p>
               </div>
 
-              <div className="grid grid-cols-7 gap-2 text-center mb-3">
+              <div className="mb-2 grid grid-cols-7 gap-1 text-center sm:mb-3 sm:gap-2">
                 {dayNames.map((day) => (
                   <div key={day} className="text-xs font-semibold text-gray-500">
                     {day}
@@ -335,25 +362,31 @@ export function Records() {
                 ))}
               </div>
 
-              <div className="grid grid-cols-7 gap-2">
+              <div className="grid grid-cols-7 gap-1 sm:gap-2">
                 {visibleMonthCalendar.map((cell, cellIndex) => (
                   <div
                     key={cellIndex}
-                    className={`min-h-[72px] rounded-2xl border p-2 text-left text-xs ${
+                    className={`min-h-[56px] rounded-xl border p-1.5 text-center text-[10px] sm:min-h-[72px] sm:rounded-2xl sm:p-2 sm:text-xs ${
                       cell === null
                         ? "bg-transparent border-transparent"
-                        : cell.count > 4
+                        : cell.count >= 5
                         ? "bg-yellow-300 text-gray-900"
-                        : cell.count > 2
+                        : cell.count >= 4
                         ? "bg-yellow-200 text-gray-900"
-                        : "bg-yellow-50 text-gray-700"
+                        : cell.count >= 2
+                        ? "bg-yellow-100 text-gray-900"
+                        : cell.count === 1
+                        ? "bg-yellow-50 text-gray-700"
+                        : "bg-white text-gray-700"
                     }`}
                   >
                     {cell ? (
                       <>
                         <div className="font-semibold">{cell.day}</div>
                         {cell.count > 0 && (
-                          <div className="mt-1 text-[10px] text-gray-700">{cell.count}회</div>
+                          <div className="mt-0.5 text-[9px] text-gray-700 sm:mt-1 sm:text-[10px]">
+                            {cell.count}회
+                          </div>
                         )}
                       </>
                     ) : (
@@ -421,6 +454,15 @@ export function Records() {
           </div>
         </motion.div>
       </div>
+
+      <button
+        type="button"
+        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+        className="fixed bottom-4 right-4 z-30 inline-flex items-center gap-2 rounded-full border border-yellow-300 bg-white px-4 py-3 text-sm font-semibold text-gray-900 shadow-lg transition hover:bg-yellow-50"
+        aria-label="맨 위로 이동"
+      >
+        <ArrowUp className="h-4 w-4" />
+      </button>
     </div>
   );
 }
