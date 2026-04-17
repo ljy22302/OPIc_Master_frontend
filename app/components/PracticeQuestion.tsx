@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from "react-router";
 import { motion } from "motion/react";
 import {
   ArrowLeft,
-  Bookmark,
   HelpCircle,
   Lightbulb,
   Mic,
@@ -14,24 +13,7 @@ import { useSpeechToTextRecorder } from "../hooks/useSpeechToTextRecorder";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import ossCharacter from "./OSS_character.png";
-
-const questions = [
-  {
-    id: 1,
-    text: "Tell me about your favorite cafe. What makes it special to you?",
-    hint: "cafe, atmosphere, menu, favorite",
-  },
-  {
-    id: 2,
-    text: "Describe a memorable travel experience you had recently.",
-    hint: "destination, activities, people, feelings",
-  },
-  {
-    id: 3,
-    text: "What kind of exercise do you enjoy doing and why?",
-    hint: "exercise, frequency, benefits, enjoyment",
-  },
-];
+import { practiceQuestions } from "./practiceQuestions";
 
 type TransitionPhase = "saving" | "preparing" | null;
 type TransitionAction = "next" | "result" | null;
@@ -80,7 +62,27 @@ export function PracticeQuestion() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const {
+    difficultyLabel = "",
+    selectedType = "",
+    selectedTypeLabel = "",
+    selectedTopicLabels = [] as string[],
+    currentQuestion: initialCurrentQuestion = 0,
+    savedTranscripts: initialSavedTranscripts = [] as string[],
+  } =
+    (location.state as {
+      difficultyLabel?: string;
+      selectedType?: string;
+      selectedTypeLabel?: string;
+      selectedTopicLabels?: string[];
+      currentQuestion?: number;
+      savedTranscripts?: string[];
+    }) ?? {};
+
+  const questionLimit = selectedType === "random" ? 2 : practiceQuestions.length;
+  const [currentQuestion, setCurrentQuestion] = useState(() =>
+    Math.min(initialCurrentQuestion, questionLimit - 1)
+  );
   const [timeLeft, setTimeLeft] = useState(recordingLimit);
   const [showQuestion, setShowQuestion] = useState(false);
   const [showHint, setShowHint] = useState(false);
@@ -89,19 +91,10 @@ export function PracticeQuestion() {
   const [transitionAction, setTransitionAction] = useState<TransitionAction>(null);
   const [transitionMessage, setTransitionMessage] = useState("");
   const [imageError, setImageError] = useState(false);
-
-  const {
-    difficultyLabel = "",
-    selectedType = "",
-    selectedTypeLabel = "",
-    selectedTopicLabels = [] as string[],
-  } =
-    (location.state as {
-      difficultyLabel?: string;
-      selectedType?: string;
-      selectedTypeLabel?: string;
-      selectedTopicLabels?: string[];
-    }) ?? {};
+  const [savedTranscripts, setSavedTranscripts] = useState<string[]>(() => {
+    const base = Array(questionLimit).fill("");
+    return base.map((value, index) => initialSavedTranscripts[index] ?? value);
+  });
 
   const {
     error,
@@ -112,11 +105,9 @@ export function PracticeQuestion() {
     stopRecording,
     transcript,
   } = useSpeechToTextRecorder({
-    questionId: `practice-${questions[currentQuestion].id}`,
+    questionId: `practice-${practiceQuestions[currentQuestion].id}`,
     language: "en",
   });
-
-  const questionLimit = selectedType === "random" ? 2 : questions.length;
 
   useEffect(() => {
     if (!isRecording) {
@@ -126,54 +117,6 @@ export function PracticeQuestion() {
     const timer = setTimeout(() => setTimeLeft((prev) => prev - 1), 1000);
     return () => clearTimeout(timer);
   }, [isRecording, timeLeft]);
-
-  useEffect(() => {
-    if (!transitionPhase) {
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      if (transitionPhase === "saving") {
-        setTransitionPhase("preparing");
-        setTransitionMessage(
-          transitionAction === "result" ? "Preparing your result..." : "Preparing the next question..."
-        );
-        return;
-      }
-
-      if (transitionAction === "next") {
-        if (currentQuestion < questionLimit - 1) {
-          setCurrentQuestion((prev) => prev + 1);
-          setTimeLeft(recordingLimit);
-          setShowQuestion(false);
-          setShowHint(false);
-          setPlayCount(0);
-          resetTranscript();
-          stopRecording(true);
-        } else {
-          navigate("/practice/result", {
-            state: {
-              questionCount: questionLimit,
-              selectedType,
-            },
-          });
-        }
-      } else if (transitionAction === "result") {
-        navigate("/practice/result", {
-          state: {
-            questionCount: questionLimit,
-            selectedType,
-          },
-        });
-      }
-
-      setTransitionPhase(null);
-      setTransitionAction(null);
-      setTransitionMessage("");
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, [transitionAction, transitionPhase, currentQuestion, navigate, questionLimit, recordingLimit, resetTranscript, selectedType, stopRecording]);
 
   const displayTypeText = useMemo(() => {
     if (!selectedTypeLabel) {
@@ -223,17 +166,58 @@ export function PracticeQuestion() {
       return;
     }
 
-    stopRecording();
+    await stopRecording();
   };
 
-  const handleNext = () => {
-    if (transitionPhase) {
+  const handleNext = async () => {
+    if (transitionPhase || isUploading) {
       return;
     }
 
-    setTransitionAction(currentQuestion < questionLimit - 1 ? "next" : "result");
-    setTransitionMessage("Saving your answer...");
+    const nextAction: TransitionAction =
+      currentQuestion < questionLimit - 1 ? "next" : "result";
+    const currentAnswer = isRecording ? await stopRecording() : transcript;
+    const nextSavedTranscripts = [...savedTranscripts];
+    nextSavedTranscripts[currentQuestion] = currentAnswer.trim();
+    setSavedTranscripts(nextSavedTranscripts);
+
+    setTransitionAction(nextAction);
+    setTransitionMessage(
+      nextAction === "result" ? "음성인식 중입니다..." : "Saving your answer..."
+    );
     setTransitionPhase("saving");
+
+    const transitionDelay = (ms: number) =>
+      new Promise((resolve) => setTimeout(resolve, ms));
+
+    await transitionDelay(1000);
+
+    if (nextAction === "next") {
+      setTransitionPhase("preparing");
+      setTransitionMessage("다음 문제로 이동 중입니다...");
+      await transitionDelay(1000);
+      setCurrentQuestion((prev) => prev + 1);
+      setTimeLeft(recordingLimit);
+      setShowQuestion(false);
+      setShowHint(false);
+      setPlayCount(0);
+      resetTranscript();
+    } else if (nextAction === "result") {
+      navigate("/practice/script", {
+        state: {
+          questionCount: questionLimit,
+          selectedType,
+          transcripts: nextSavedTranscripts,
+          difficultyLabel,
+          selectedTypeLabel,
+          selectedTopicLabels,
+        },
+      });
+    }
+
+    setTransitionPhase(null);
+    setTransitionAction(null);
+    setTransitionMessage("");
   };
 
   return (
@@ -326,7 +310,7 @@ export function PracticeQuestion() {
                         className="text-left"
                       >
                         <p className="text-center text-base font-medium leading-snug text-gray-900 sm:text-lg sm:leading-relaxed">
-                          {questions[currentQuestion].text}
+                          {practiceQuestions[currentQuestion].text}
                         </p>
                       </motion.div>
                     ) : (
@@ -351,8 +335,8 @@ export function PracticeQuestion() {
                         animate={{ opacity: 1, y: 0 }}
                         className="text-left"
                       >
-                        <p className="text-base font-medium leading-snug text-gray-700 sm:text-lg sm:leading-relaxed">
-                          {questions[currentQuestion].hint}
+                          <p className="text-base font-medium leading-snug text-gray-700 sm:text-lg sm:leading-relaxed">
+                          {practiceQuestions[currentQuestion].hint}
                         </p>
                       </motion.div>
                     ) : (
@@ -418,22 +402,12 @@ export function PracticeQuestion() {
             </div>
           </div>
 
-          <div className="min-h-32 rounded-lg bg-gray-50 p-4">
-            <p className="mb-2 text-sm text-gray-500">Transcript</p>
-            <p className="text-gray-700">
-              {transcript || "Your transcript will appear here after you start recording."}
-            </p>
-          </div>
         </Card>
 
-        <div className="grid grid-cols-2 gap-4">
-          <Button variant="outline" className="gap-2">
-            <Bookmark className="h-4 w-4" />
-            Save Question
-          </Button>
+        <div className="grid grid-cols-1 gap-4">
           <Button
             onClick={handleNext}
-            disabled={!!transitionPhase}
+            disabled={!!transitionPhase || isUploading}
             className="bg-yellow-400 text-gray-900 hover:bg-yellow-500 disabled:opacity-70"
           >
             {currentQuestion < questionLimit - 1 ? "Next Question" : "See Result"}

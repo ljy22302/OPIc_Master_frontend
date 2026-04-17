@@ -40,6 +40,7 @@ export function useSpeechToTextRecorder(
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const skipUploadOnStopRef = useRef(false);
+  const stopResolveRef = useRef<((value: string) => void) | null>(null);
 
   const [isRecording, setIsRecording] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -49,17 +50,19 @@ export function useSpeechToTextRecorder(
   useEffect(() => {
     return () => {
       cleanupRecorder();
+      stopResolveRef.current?.("");
+      stopResolveRef.current = null;
     };
   }, []);
 
   async function startRecording() {
     if (!navigator.mediaDevices?.getUserMedia) {
-      setError("이 브라우저는 마이크 녹음을 지원하지 않습니다.");
+      setError("This browser does not support microphone access.");
       return;
     }
 
     if (typeof MediaRecorder === "undefined") {
-      setError("이 브라우저는 MediaRecorder를 지원하지 않습니다.");
+      setError("This browser does not support MediaRecorder.");
       return;
     }
 
@@ -87,7 +90,9 @@ export function useSpeechToTextRecorder(
 
       recorder.onerror = () => {
         setIsRecording(false);
-        setError("녹음 중 오류가 발생했습니다.");
+        setError("An error occurred while recording.");
+        stopResolveRef.current?.("");
+        stopResolveRef.current = null;
         cleanupRecorder();
       };
 
@@ -108,15 +113,21 @@ export function useSpeechToTextRecorder(
         cleanupRecorder();
 
         if (shouldSkipUpload) {
+          stopResolveRef.current?.(transcript);
+          stopResolveRef.current = null;
           return;
         }
 
         if (audioBlob.size === 0) {
-          setError("녹음된 음성이 비어 있습니다.");
+          setError("The recorded audio is empty.");
+          stopResolveRef.current?.("");
+          stopResolveRef.current = null;
           return;
         }
 
-        await uploadAudio(audioBlob, finalMimeType);
+        const uploadedTranscript = await uploadAudio(audioBlob, finalMimeType);
+        stopResolveRef.current?.(uploadedTranscript);
+        stopResolveRef.current = null;
       };
 
       mediaRecorderRef.current = recorder;
@@ -126,21 +137,26 @@ export function useSpeechToTextRecorder(
       setError(
         recordingError instanceof Error
           ? recordingError.message
-          : "마이크 권한을 확인할 수 없습니다.",
+          : "Unable to access the microphone.",
       );
+      stopResolveRef.current?.("");
+      stopResolveRef.current = null;
       cleanupRecorder();
     }
   }
 
-  function stopRecording(skipUpload = false) {
+  function stopRecording(skipUpload = false): Promise<string> {
     const recorder = mediaRecorderRef.current;
 
     if (!recorder || recorder.state !== "recording") {
-      return;
+      return Promise.resolve(transcript);
     }
 
-    skipUploadOnStopRef.current = skipUpload;
-    recorder.stop();
+    return new Promise((resolve) => {
+      stopResolveRef.current = resolve;
+      skipUploadOnStopRef.current = skipUpload;
+      recorder.stop();
+    });
   }
 
   function resetTranscript() {
@@ -176,7 +192,7 @@ export function useSpeechToTextRecorder(
             ? data.detail
             : data && typeof data.message === "string"
               ? data.message
-              : "STT 서버 요청에 실패했습니다.";
+              : "STT server request failed.";
         throw new Error(message);
       }
 
@@ -184,12 +200,14 @@ export function useSpeechToTextRecorder(
         data && typeof data.transcript === "string" ? data.transcript : "";
 
       setTranscript(nextTranscript);
+      return nextTranscript;
     } catch (uploadError) {
       setError(
         uploadError instanceof Error
           ? uploadError.message
-          : "음성 업로드 중 오류가 발생했습니다.",
+          : "An upload error occurred.",
       );
+      return "";
     } finally {
       setIsUploading(false);
     }
