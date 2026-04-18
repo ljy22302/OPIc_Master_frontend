@@ -14,7 +14,6 @@ import { MockTestQuestion } from "./components/MockTestQuestion";
 import { MockTestResult } from "./components/MockTestResult";
 import { SavedQuestions } from "./components/SavedQuestions";
 import { Resources } from "./components/Resources";
-import { Records } from "./components/Records";
 
 export const router = createBrowserRouter([
   {
@@ -35,7 +34,6 @@ export const router = createBrowserRouter([
       { path: "mocktest/result", Component: MockTestResult },
       { path: "saved", Component: SavedQuestions },
       { path: "resources", Component: Resources },
-      { path: "records", Component: Records },
     ],
   },
 ]);
