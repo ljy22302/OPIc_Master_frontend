@@ -349,13 +349,37 @@ export function Resources() {
         </div>
 
         <Tabs defaultValue="phrases" className="mb-6">
-          <TabsList className="grid w-full max-w-2xl grid-cols-3">
-            <TabsTrigger value="phrases">필수 문장</TabsTrigger>
-            <TabsTrigger value="vocabulary">주제별 어휘</TabsTrigger>
-            <TabsTrigger value="tips">유용한 팁</TabsTrigger>
+          <TabsList className="grid w-full max-w-3xl grid-cols-3 gap-3 bg-transparent p-0">
+            <TabsTrigger
+              value="phrases"
+              className="group flex h-20 flex-col items-start justify-between rounded-2xl border border-gray-200 bg-white px-4 py-3 text-left shadow-sm data-[state=active]:border-yellow-400 data-[state=active]:bg-yellow-50 data-[state=active]:shadow-md"
+            >
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-yellow-400 text-xs font-bold text-gray-900">
+                01
+              </span>
+              <span className="text-sm font-semibold text-gray-900">필수 문장</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="vocabulary"
+              className="group flex h-20 flex-col items-start justify-between rounded-2xl border border-gray-200 bg-white px-4 py-3 text-left shadow-sm data-[state=active]:border-yellow-400 data-[state=active]:bg-yellow-50 data-[state=active]:shadow-md"
+            >
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-gray-900">
+                02
+              </span>
+              <span className="text-sm font-semibold text-gray-900">주제별 어휘</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="tips"
+              className="group flex h-20 flex-col items-start justify-between rounded-2xl border border-gray-200 bg-white px-4 py-3 text-left shadow-sm data-[state=active]:border-yellow-400 data-[state=active]:bg-yellow-50 data-[state=active]:shadow-md"
+            >
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-gray-900">
+                03
+              </span>
+              <span className="text-sm font-semibold text-gray-900">유용한 팁</span>
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="phrases" className="mt-6">
+          <TabsContent value="phrases" className="mt-10 pt-2">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
               {Object.entries(essentialPhrases).map(([category, phrases]) => (
                 <Card key={category} className="bg-white p-6">
@@ -413,7 +437,7 @@ export function Resources() {
             </motion.div>
           </TabsContent>
 
-          <TabsContent value="vocabulary" className="mt-6">
+          <TabsContent value="vocabulary" className="mt-10 pt-2">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
               {topicVocabulary.map((topic) => (
                 <Card key={topic.topic} className="bg-white p-6">
@@ -459,7 +483,7 @@ export function Resources() {
             </motion.div>
           </TabsContent>
 
-          <TabsContent value="tips" className="mt-6">
+          <TabsContent value="tips" className="mt-10 pt-2">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
               {usefulTips.map((tip, tipIndex) => (
                 <Card key={tip.title} className="bg-white p-6">
