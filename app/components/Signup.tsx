@@ -12,13 +12,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
-import { checkUsername, signup } from "../lib/authApi";
+import { checkUsername, sendEmailVerification, signup, verifyEmail } from "../lib/authApi";
 
 const currentYear = new Date().getFullYear();
 const years = Array.from({ length: 100 }, (_, index) => currentYear - index);
 const months = Array.from({ length: 12 }, (_, index) => String(index + 1).padStart(2, "0"));
 const days = Array.from({ length: 31 }, (_, index) => String(index + 1).padStart(2, "0"));
 const emailDomains = ["naver.com", "gmail.com", "daum.net", "직접입력"];
+const passwordRuleMessage = "영문, 숫자, 특수문자가 모두 포함되어야 합니다.";
+const passwordValidationErrors = new Set([
+  passwordRuleMessage,
+  "비밀번호 사용 가능 조건을 만족해주세요.",
+  "비밀번호를 8~20자로 입력해주세요.",
+]);
+
+function isValidPassword(password: string) {
+  const hasLetter = /[A-Za-z]/.test(password);
+  const hasNumber = /\d/.test(password);
+  const hasSpecial = /[^A-Za-z0-9]/.test(password);
+  return hasLetter && hasNumber && hasSpecial;
+}
 
 export function Signup() {
   const navigate = useNavigate();
@@ -29,13 +42,20 @@ export function Signup() {
   const [emailLocal, setEmailLocal] = useState("");
   const [emailDomain, setEmailDomain] = useState("naver.com");
   const [customEmailDomain, setCustomEmailDomain] = useState("");
+  const [emailCode, setEmailCode] = useState("");
   const [birthYear, setBirthYear] = useState("");
   const [birthMonth, setBirthMonth] = useState("");
   const [birthDay, setBirthDay] = useState("");
-  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [idChecked, setIdChecked] = useState(false);
+  const [passwordUsable, setPasswordUsable] = useState(false);
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [usernameMessage, setUsernameMessage] = useState("");
+  const [passwordMessage, setPasswordMessage] = useState("");
+  const [emailMessage, setEmailMessage] = useState("");
   const [isCheckingId, setIsCheckingId] = useState(false);
+  const [isSendingEmailCode, setIsSendingEmailCode] = useState(false);
+  const [isVerifyingEmail, setIsVerifyingEmail] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const resolvedDomain = emailDomain === "직접입력" ? customEmailDomain.trim() : emailDomain;
@@ -49,40 +69,103 @@ export function Signup() {
   const birthDate =
     birthYear && birthMonth && birthDay ? `${birthYear}-${birthMonth}-${birthDay}` : undefined;
 
+  const canSignup = idChecked && passwordUsable && emailVerified && !isSubmitting;
+
   const handleCheckUsername = async () => {
     if (!username.trim()) {
       setError("아이디를 먼저 입력해주세요.");
+      setUsernameMessage("");
       return;
     }
 
     try {
       setIsCheckingId(true);
       setError("");
+      setUsernameMessage("");
       const result = await checkUsername(username.trim());
       setIdChecked(result.available);
-      setMessage(result.message);
-      if (!result.available) {
-        setError(result.message);
+      if (result.available) {
+        setUsernameMessage("중복 확인 완료");
+        return;
       }
+      setError(result.message);
     } catch (checkError) {
       setError(checkError instanceof Error ? checkError.message : "중복 확인에 실패했습니다.");
       setIdChecked(false);
+      setUsernameMessage("");
     } finally {
       setIsCheckingId(false);
     }
   };
 
-  const handleSignup = async () => {
-    setError("");
-    setMessage("");
+  const handlePasswordChange = (value: string) => {
+    setPassword(value);
 
-    if (!username || username.length < 6 || username.length > 20) {
-      setError("아이디는 6~20자로 입력해주세요.");
+    if (passwordValidationErrors.has(error)) {
+      setError("");
+    }
+
+    if (isValidPassword(value)) {
+      setPasswordUsable(true);
+      setPasswordMessage("비밀번호로 사용 가능합니다.");
       return;
     }
 
+    setPasswordUsable(false);
+    setPasswordMessage("");
+  };
+
+  const handleSendEmailCode = async () => {
+    if (!email || !email.includes("@")) {
+      setError("이메일을 정확히 입력해주세요.");
+      setEmailMessage("");
+      return;
+    }
+
+    try {
+      setIsSendingEmailCode(true);
+      setError("");
+      setEmailVerified(false);
+      const response = await sendEmailVerification({ email });
+      setEmailMessage(response.message);
+    } catch (sendError) {
+      setError(sendError instanceof Error ? sendError.message : "이메일 인증 코드 발송에 실패했습니다.");
+      setEmailMessage("");
+    } finally {
+      setIsSendingEmailCode(false);
+    }
+  };
+
+  const handleVerifyEmail = async () => {
+    if (!emailCode.trim()) {
+      setError("이메일 인증 코드를 입력해주세요.");
+      return;
+    }
+
+    try {
+      setIsVerifyingEmail(true);
+      setError("");
+      const response = await verifyEmail({ email, code: emailCode.trim() });
+      setEmailVerified(true);
+      setEmailMessage(response.message);
+    } catch (verifyError) {
+      setEmailVerified(false);
+      setError(verifyError instanceof Error ? verifyError.message : "이메일 인증에 실패했습니다.");
+    } finally {
+      setIsVerifyingEmail(false);
+    }
+  };
+
+  const handleSignup = async () => {
+    setError("");
+
     if (!idChecked) {
       setError("아이디 중복 확인을 해주세요.");
+      return;
+    }
+
+    if (!passwordUsable) {
+      setError("비밀번호 사용 가능 조건을 만족해주세요.");
       return;
     }
 
@@ -96,13 +179,13 @@ export function Signup() {
       return;
     }
 
-    if (!name.trim()) {
-      setError("이름을 입력해주세요.");
+    if (!emailVerified) {
+      setError("이메일 인증을 완료해주세요.");
       return;
     }
 
-    if (!email || !email.includes("@")) {
-      setError("이메일을 정확히 입력해주세요.");
+    if (!name.trim()) {
+      setError("이름을 입력해주세요.");
       return;
     }
 
@@ -136,7 +219,7 @@ export function Signup() {
         >
           <div className="mb-8 text-center">
             <h1 className="text-4xl font-bold text-gray-900">회원가입</h1>
-            <p className="mt-3 text-gray-600">아이디, 비밀번호, 이메일로 간단하게 가입할 수 있어요.</p>
+            <p className="mt-3 text-gray-600">중복확인, 비밀번호 확인, 이메일 인증을 완료해야 가입할 수 있어요.</p>
           </div>
 
           <Card className="border-2 border-yellow-200 bg-white p-6 shadow-xl md:p-8">
@@ -147,16 +230,6 @@ export function Signup() {
                 className="mb-6 rounded-lg border border-red-200 bg-red-50 p-3"
               >
                 <p className="text-sm text-red-600">{error}</p>
-              </motion.div>
-            )}
-
-            {message && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="mb-6 rounded-lg border border-yellow-200 bg-yellow-50 p-3"
-              >
-                <p className="text-sm text-yellow-800">{message}</p>
               </motion.div>
             )}
 
@@ -172,6 +245,7 @@ export function Signup() {
                     onChange={(e) => {
                       setUsername(e.target.value);
                       setIdChecked(false);
+                      setUsernameMessage("");
                     }}
                     placeholder="아이디 입력 (6~20자)"
                     className="flex-1"
@@ -185,6 +259,9 @@ export function Signup() {
                     {isCheckingId ? "확인 중" : "중복 확인"}
                   </Button>
                 </div>
+                {idChecked && usernameMessage && (
+                  <p className="mt-2 text-sm font-medium text-green-600">{usernameMessage}</p>
+                )}
               </div>
 
               <div>
@@ -195,12 +272,15 @@ export function Signup() {
                   id="password"
                   type="password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => handlePasswordChange(e.target.value)}
                   placeholder="비밀번호 입력 (8~20자)"
                 />
-                <span className="ml-2 text-xs font-medium text-red-500">
-                  영문, 숫자, 특수문자 조합의 비밀번호를 권장합니다.
-                </span>
+                {!passwordUsable && password.length > 0 && (
+                  <span className="ml-2 text-xs font-medium text-red-500">{passwordRuleMessage}</span>
+                )}
+                {passwordUsable && passwordMessage && (
+                  <p className="mt-2 text-sm font-medium text-green-600">{passwordMessage}</p>
+                )}
               </div>
 
               <div>
@@ -228,14 +308,19 @@ export function Signup() {
                 />
               </div>
 
-              <div>
+              <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-4">
+                <p className="mb-3 text-sm font-semibold text-gray-900">이메일 인증</p>
                 <Label className="mb-2 block text-sm font-semibold text-gray-900">
                   <span className="text-red-500">*</span> 이메일 주소
                 </Label>
                 <div className="flex items-center gap-2">
                   <Input
                     value={emailLocal}
-                    onChange={(e) => setEmailLocal(e.target.value)}
+                    onChange={(e) => {
+                      setEmailLocal(e.target.value);
+                      setEmailVerified(false);
+                      setEmailMessage("");
+                    }}
                     placeholder="이메일 주소"
                     className="min-w-0 flex-1"
                   />
@@ -243,12 +328,23 @@ export function Signup() {
                   {emailDomain === "직접입력" ? (
                     <Input
                       value={customEmailDomain}
-                      onChange={(e) => setCustomEmailDomain(e.target.value)}
+                      onChange={(e) => {
+                        setCustomEmailDomain(e.target.value);
+                        setEmailVerified(false);
+                        setEmailMessage("");
+                      }}
                       placeholder="직접 입력"
                       className="min-w-0 flex-1"
                     />
                   ) : (
-                    <Select value={emailDomain} onValueChange={setEmailDomain}>
+                    <Select
+                      value={emailDomain}
+                      onValueChange={(value) => {
+                        setEmailDomain(value);
+                        setEmailVerified(false);
+                        setEmailMessage("");
+                      }}
+                    >
                       <SelectTrigger className="min-w-[140px] flex-1 bg-white">
                         <SelectValue placeholder="도메인 선택" />
                       </SelectTrigger>
@@ -262,6 +358,40 @@ export function Signup() {
                     </Select>
                   )}
                 </div>
+
+                <div className="mt-3 flex gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={isSendingEmailCode}
+                    onClick={() => void handleSendEmailCode()}
+                  >
+                    {isSendingEmailCode ? "전송 중" : "이메일 인증코드 받기"}
+                  </Button>
+                </div>
+
+                <div className="mt-3 flex gap-3">
+                  <Input
+                    value={emailCode}
+                    onChange={(e) => setEmailCode(e.target.value)}
+                    placeholder="인증코드 6자리 입력"
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    className="bg-yellow-400 text-gray-900 hover:bg-yellow-500"
+                    disabled={isVerifyingEmail}
+                    onClick={() => void handleVerifyEmail()}
+                  >
+                    {isVerifyingEmail ? "확인 중" : "이메일 인증 확인"}
+                  </Button>
+                </div>
+
+                {emailMessage && (
+                  <p className={`mt-2 text-sm font-medium ${emailVerified ? "text-green-600" : "text-gray-700"}`}>
+                    {emailVerified ? "이메일 인증 완료" : emailMessage}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -314,8 +444,8 @@ export function Signup() {
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
               <Button
                 type="button"
-                className="bg-yellow-400 px-8 text-gray-900 shadow-md hover:bg-yellow-500 transition-all"
-                disabled={isSubmitting}
+                className="bg-yellow-400 px-8 text-gray-900 shadow-md hover:bg-yellow-500 transition-all disabled:opacity-60"
+                disabled={!canSignup}
                 onClick={() => void handleSignup()}
               >
                 {isSubmitting ? "가입 중..." : "가입하기"}

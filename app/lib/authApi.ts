@@ -44,6 +44,7 @@ export type AuthTokenResponse = {
 export type AuthMessageResponse = {
   message: string;
   resetLink?: string | null;
+  verificationCode?: string | null;
 };
 
 export function signup(payload: {
@@ -71,6 +72,20 @@ export function checkUsername(username: string) {
     `/api/auth/check-username?username=${encodeURIComponent(username)}`,
     { method: "GET" },
   );
+}
+
+export function sendEmailVerification(payload: { email: string }) {
+  return request<AuthMessageResponse>("/api/auth/email/send-verification", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function verifyEmail(payload: { email: string; code: string }) {
+  return request<AuthMessageResponse>("/api/auth/email/verify", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
 
 export function findId(payload: { name: string; email: string }) {
