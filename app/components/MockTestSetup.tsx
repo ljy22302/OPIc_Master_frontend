@@ -169,8 +169,20 @@ export function MockTestSetup() {
           <Button variant="ghost" size="icon" onClick={() => navigate("/main")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">모의고사 모드 설정</h1>
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <h1 className="text-3xl font-bold text-gray-900">모의고사 모드 설정</h1>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowGuide(true)}
+                className="mt-0.5 h-8 w-8 rounded-full text-gray-500 hover:bg-yellow-100 hover:text-gray-900"
+                aria-label="도움말 보기"
+              >
+                <HelpCircle className="h-5 w-5" />
+              </Button>
+            </div>
             <p className="text-gray-600">실전과 같은 흐름으로 15문제를 준비해보세요.</p>
           </div>
         </div>
@@ -182,63 +194,42 @@ export function MockTestSetup() {
                 <div>
                   <h2 className="text-lg font-semibold text-gray-900">선택 정보</h2>
                 </div>
-                <span className="rounded-full bg-yellow-400 px-3 py-1 text-sm font-semibold text-gray-900">
+                <span className="rounded-full bg-yellow-400 px-3 py-1 text-sm font-semibold text-gray-900 lg:hidden">
+                  선택 {selectedTotalCount}개
+                </span>
+                <span className="hidden rounded-full bg-yellow-400 px-3 py-1 text-sm font-semibold text-gray-900 lg:inline-flex">
                   {difficulty ? difficulties.find((item) => item.value === difficulty)?.label : "레벨 선택"}
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 gap-0.5 lg:grid-cols-1">
-                <InfoItem label="현재 상태" value={currentStatuses.find((item) => item.value === currentStatus)?.label || "미선택"} />
-                <InfoItem label="학생 여부" value={studentStatuses.find((item) => item.value === studentStatus)?.label || "미선택"} />
-                <InfoItem label="거주 형태" value={livingSituations.find((item) => item.value === livingSituation)?.label || "미선택"} />
+              <div className="grid grid-cols-2 gap-0.5 lg:hidden">
                 <InfoItem label="여가 활동" value={selectedLeisure.length > 0 ? selectedLeisure.join(", ") : "미선택"} />
                 <InfoItem label="취미 관심사" value={selectedHobbies.length > 0 ? selectedHobbies.join(", ") : "미선택"} />
                 <InfoItem label="운동" value={selectedExercises.length > 0 ? selectedExercises.join(", ") : "미선택"} />
                 <InfoItem label="휴가/출장" value={selectedTravel.length > 0 ? selectedTravel.join(", ") : "미선택"} />
               </div>
-              <div className="text-center">
-                <p className="text-sm font-medium text-gray-900">여가활동, 취미 관심사, 운동, 휴가/출장 <br /> 4가지 항목에서 총 12개 골라주세요</p>
-                <span className="mx-auto mt-1 inline-flex items-center rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-gray-700 shadow-sm">
-                  현재 {selectedTotalCount}/12개 선택됨
-                </span>
-              </div>
 
-              <div className="mt-0">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-7 w-full justify-center gap-2 border-yellow-300 bg-white text-xs hover:bg-yellow-50"
-                  onClick={() => setShowGuide((prev) => !prev)}
-                >
-                  <HelpCircle className="h-4 w-4" />
-                  선택 Tip
-                </Button>
-              </div>
+              <div className="hidden lg:block">
+                <div className="grid grid-cols-1 gap-0.5">
+                  <InfoItem label="현재 상태" value={currentStatuses.find((item) => item.value === currentStatus)?.label || "미선택"} />
+                  <InfoItem label="학생 여부" value={studentStatuses.find((item) => item.value === studentStatus)?.label || "미선택"} />
+                  <InfoItem label="거주 형태" value={livingSituations.find((item) => item.value === livingSituation)?.label || "미선택"} />
+                  <InfoItem label="여가 활동" value={selectedLeisure.length > 0 ? selectedLeisure.join(", ") : "미선택"} />
+                  <InfoItem label="취미 관심사" value={selectedHobbies.length > 0 ? selectedHobbies.join(", ") : "미선택"} />
+                  <InfoItem label="운동" value={selectedExercises.length > 0 ? selectedExercises.join(", ") : "미선택"} />
+                  <InfoItem label="휴가/출장" value={selectedTravel.length > 0 ? selectedTravel.join(", ") : "미선택"} />
+                </div>
 
-              {showGuide && (
-                <motion.div
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mt-0 space-y-0.5"
-                >
-                  <div className="rounded-2xl border border-red-200 bg-red-50 p-2 text-sm text-red-600">
-                    <p className="font-semibold text-gray-900">현재 상태, 학생 여부, 거주 형태, 여가 활동</p>
-                    <p className="mt-1">
-                      선택하지 않은 선지는 높은 확률로 출제되지 않아요.
-                      대답하기 어려운 선지는 피해주세요.
-                    </p>
-                  </div>
-                  <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-2 text-sm text-yellow-800">
-                    <p className="font-semibold text-gray-900">취미 관심사, 운동, 휴가/출장 경험</p>
-                    <p className="mt-1">
-                      선택한 선지는 높은 확률로 출제되어요.
-                      대답할 수 있는 주제로 신중하게 선택해주세요.
-                    </p>
-                  </div>
-                </motion.div>
-              )}
-            </Card>
-          </aside>
+                <div className="text-center">
+                  <p className="text-sm font-medium text-gray-900">여가활동, 취미 관심사, 운동, 휴가/출장 <br /> 4가지 항목에서 총 12개 골라주세요</p>
+                  <span className="mx-auto mt-1 inline-flex items-center rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-gray-700 shadow-sm">
+                    현재 {selectedTotalCount}/12개 선택됨
+                  </span>
+                </div>
+
+              </div>
+              </Card>
+            </aside>
 
           <main>
             <motion.div
@@ -312,7 +303,6 @@ export function MockTestSetup() {
                     </button>
                   ))}
                 </div>
-                <p className="text-sm text-gray-500 mt-1"> 추천 내용: 무직 </p>
               </Card>
 
               <Card className="bg-white p-6">
@@ -333,7 +323,6 @@ export function MockTestSetup() {
                     </button>
                   ))}
                 </div>
-                <p className="text-sm text-gray-500 mt-1"> 추천 내용: 졸업 후 5년 지남 </p>
               </Card>
 
               <Card className="bg-white p-6">
@@ -354,7 +343,6 @@ export function MockTestSetup() {
                     </button>
                   ))}
                 </div>
-                <p className="text-sm text-gray-500 mt-1"> 추천 내용: 1인 거주 </p>
               </Card>
 
               <Card className="bg-white p-6">
@@ -383,7 +371,6 @@ export function MockTestSetup() {
                     </button>
                   ))}
                 </div>
-                <p className="text-sm text-gray-500 mt-1"> 추천 내용: 공원, 캠핑과 같이 유사한 주제 </p>
               </Card>
 
               <Card className="bg-white p-6">
@@ -412,7 +399,6 @@ export function MockTestSetup() {
                     </button>
                   ))}
                 </div>
-                <p className="text-sm text-gray-500 mt-1"> 추천 내용: 여가활동과 유사한 주제 </p>
               </Card>
 
               <Card className="bg-white p-6">
@@ -441,7 +427,6 @@ export function MockTestSetup() {
                     </button>
                   ))}
                 </div>
-                <p className="text-sm text-gray-500 mt-1"> 추천 내용: 걷기/조깅/ 운동안함 </p>
               </Card>
 
               <Card className="bg-white p-6">
@@ -504,6 +489,56 @@ export function MockTestSetup() {
             </motion.div>
           </main>
         </div>
+
+        {showGuide && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              className="w-full max-w-2xl rounded-3xl border border-yellow-200 bg-white p-6 shadow-2xl"
+            >
+              <div className="mb-4 flex items-center justify-between gap-4">
+                <h2 className="text-xl font-bold text-gray-900">추천 선택지</h2>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowGuide(false)}
+                  className="h-8 w-8 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+                  aria-label="도움말 닫기"
+                >
+                  <ArrowLeft className="h-4 w-4 rotate-180" />
+                </Button>
+              </div>
+
+              <div className="space-y-4 text-sm leading-relaxed text-gray-700">
+                <div className="space-y-1 rounded-2xl border border-yellow-100 bg-yellow-50 p-4">
+                  <p><span className="font-semibold text-gray-900">현재 상태 :</span> 일 경험 없음</p>
+                  <p><span className="font-semibold text-gray-900">학생 여부 :</span> 졸업 후 5년 지남</p>
+                  <p><span className="font-semibold text-gray-900">거주 형태 :</span> 1인 거주</p>
+                  <p><span className="font-semibold text-gray-900">여가활동 :</span> 공원, 캠핑과 같이 유사한 주제</p>
+                  <p><span className="font-semibold text-gray-900">취미 관심사 :</span> 여가활동과 유사한 주제</p>
+                  <p><span className="font-semibold text-gray-900">운동 :</span> 걷기, 조깅, 운동안함</p>
+                  <p><span className="font-semibold text-gray-900">휴가/출장 :</span> 국내여행, 해외여행, 집에서 보내는 휴가</p>
+                </div>
+
+                <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
+                  <p className="font-semibold text-gray-900">&lt;현재 상태, 학생 여부, 거주 형태, 여가 활동&gt;</p>
+                  <p className="mt-2">
+                    선택하지 않은 선지는 높은 확률로 출제되지 않아요. 대답하기 어려운 선지는 피해주세요.
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-4">
+                  <p className="font-semibold text-gray-900">&lt;취미 관심사, 운동, 휴가/출장 경험&gt;</p>
+                  <p className="mt-2">
+                    선택한 선지는 높은 확률로 출제되어요. 총 12개를 대답할 수 있는 주제로 신중하게 선택해주세요.
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
       </div>
     </div>
   );
