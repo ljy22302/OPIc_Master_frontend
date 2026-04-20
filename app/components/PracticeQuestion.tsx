@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { motion } from "motion/react";
 import {
@@ -85,6 +85,7 @@ export function PracticeQuestion() {
   );
   const [timeLeft, setTimeLeft] = useState(recordingLimit);
   const [showQuestion, setShowQuestion] = useState(false);
+  const [showTranslation, setShowTranslation] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [playCount, setPlayCount] = useState(0);
   const [transitionPhase, setTransitionPhase] = useState<TransitionPhase>(null);
@@ -123,7 +124,7 @@ export function PracticeQuestion() {
       return "";
     }
 
-    if (selectedTypeLabel === "콤보형 문제유형" && selectedTopicLabels[0]) {
+    if (selectedTypeLabel === "肄ㅻ낫??臾몄젣?좏삎" && selectedTopicLabels[0]) {
       return `${selectedTypeLabel} - ${selectedTopicLabels[0]}`;
     }
 
@@ -183,7 +184,7 @@ export function PracticeQuestion() {
 
     setTransitionAction(nextAction);
     setTransitionMessage(
-      nextAction === "result" ? "음성인식 중입니다..." : "Saving your answer..."
+      nextAction === "result" ? "채점 화면으로 이동 중입니다..." : "Saving your answer..."
     );
     setTransitionPhase("saving");
 
@@ -199,6 +200,7 @@ export function PracticeQuestion() {
       setCurrentQuestion((prev) => prev + 1);
       setTimeLeft(recordingLimit);
       setShowQuestion(false);
+      setShowTranslation(false);
       setShowHint(false);
       setPlayCount(0);
       resetTranscript();
@@ -296,31 +298,56 @@ export function PracticeQuestion() {
 
             <div className="flex flex-col justify-start">
               <div className="mb-4 grid h-[210px] gap-3 sm:h-[300px] sm:grid-rows-[3fr_2fr] sm:gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowQuestion((prev) => !prev)}
-                  className="h-full w-full"
-                >
-                  <div className="flex h-full w-full items-center justify-center rounded-md border border-yellow-100 bg-yellow-50 px-2 py-3 text-center shadow-md transition hover:bg-yellow-100 hover:shadow-lg sm:rounded-xl sm:px-4 sm:py-0">
-                    {showQuestion ? (
-                      <motion.div
-                        key={`question-${currentQuestion}`}
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="text-left"
-                      >
-                        <p className="text-center text-base font-medium leading-snug text-gray-900 sm:text-lg sm:leading-relaxed">
-                          {practiceQuestions[currentQuestion].text}
-                        </p>
-                      </motion.div>
-                    ) : (
-                      <span className="inline-flex items-center gap-2 text-base font-semibold text-yellow-900 sm:text-2xl">
-                        <HelpCircle className="h-4 w-4 shrink-0" />
-                        Show Question
-                      </span>
-                    )}
-                  </div>
-                </button>
+                <div className="flex h-full w-full items-center justify-center rounded-md border border-yellow-100 bg-yellow-50 px-2 py-3 text-center shadow-md transition hover:bg-yellow-100 hover:shadow-lg sm:rounded-xl sm:px-4 sm:py-0">
+                  {showQuestion ? (
+                    <motion.div
+                      key={`question-${currentQuestion}`}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex h-full w-full flex-col items-center justify-center gap-3"
+                    >
+                      <p className="text-center text-base font-medium leading-snug text-gray-900 sm:text-lg sm:leading-relaxed">
+                        {practiceQuestions[currentQuestion].text}
+                      </p>
+
+                      {!showTranslation && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowTranslation(true)}
+                          className="gap-2 border-yellow-300 bg-white text-yellow-900 hover:bg-yellow-100"
+                        >
+                          <HelpCircle className="h-4 w-4 shrink-0" />
+                          해석 보기
+                        </Button>
+                      )}
+
+                      {showTranslation && (
+                        <motion.p
+                          key={`translation-${currentQuestion}`}
+                          initial={{ opacity: 0, y: 6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="max-w-[32rem] text-center text-sm font-medium leading-relaxed text-gray-700 sm:text-base"
+                        >
+                          {practiceQuestions[currentQuestion].translation}
+                        </motion.p>
+                      )}
+                    </motion.div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowQuestion(true);
+                        setShowTranslation(false);
+                      }}
+                      className="inline-flex items-center gap-2 text-base font-semibold text-yellow-900 sm:text-2xl"
+                    >
+                      <HelpCircle className="h-4 w-4 shrink-0" />
+                      Show Question
+                    </button>
+                  )}
+                </div>
 
                 <button
                   type="button"
@@ -439,3 +466,4 @@ export function PracticeQuestion() {
     </div>
   );
 }
+
