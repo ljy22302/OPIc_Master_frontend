@@ -6,44 +6,52 @@ import { Card } from "./ui/card";
 import { Checkbox } from "./ui/checkbox";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
+import { login } from "../lib/authApi";
 
 export function Login() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [autoLogin, setAutoLogin] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     setError("");
 
-    if (!email || !password) {
+    if (!username || !password) {
       setError("아이디와 비밀번호를 입력해주세요.");
       return;
     }
 
-    if (!email.includes("@")) {
-      setError("올바른 아이디 형식으로 입력해주세요.");
-      return;
-    }
-
     if (password.length < 4) {
-      setError("비밀번호는 4자 이상이어야 합니다.");
+      setError("비밀번호는 4자 이상 입력해주세요.");
       return;
     }
 
-    if (autoLogin) {
-      localStorage.setItem("autoLogin", "true");
-    } else {
-      localStorage.removeItem("autoLogin");
-    }
+    try {
+      setIsSubmitting(true);
+      const result = await login({ username, password });
+      localStorage.setItem("accessToken", result.accessToken);
+      localStorage.setItem("currentUser", JSON.stringify(result.user));
 
-    navigate("/main");
+      if (autoLogin) {
+        localStorage.setItem("autoLogin", "true");
+      } else {
+        localStorage.removeItem("autoLogin");
+      }
+
+      navigate("/main");
+    } catch (loginError) {
+      setError(loginError instanceof Error ? loginError.message : "로그인에 실패했습니다.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleKeyPress = (e: KeyboardEvent) => {
     if (e.key === "Enter") {
-      handleLogin();
+      void handleLogin();
     }
   };
 
@@ -62,15 +70,14 @@ export function Login() {
 
           <Card className="p-8 bg-white border-2 border-yellow-200 shadow-lg mb-6">
             <div className="mb-6">
-              <Label htmlFor="email" className="text-sm font-semibold text-gray-900 mb-2 block">
+              <Label htmlFor="username" className="text-sm font-semibold text-gray-900 mb-2 block">
                 아이디
               </Label>
               <Input
-                id="email"
-                type="email"
-                placeholder="example@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="username"
+                placeholder="아이디 입력"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 onKeyDown={handleKeyPress}
                 className="w-full"
               />
@@ -107,17 +114,18 @@ export function Login() {
                   checked={autoLogin}
                   onCheckedChange={(checked) => setAutoLogin(checked === true)}
                 />
-                <span>자동로그인</span>
+                <span>자동 로그인</span>
               </label>
             </div>
 
             <Button
               type="button"
               size="lg"
-              onClick={handleLogin}
+              onClick={() => void handleLogin()}
+              disabled={isSubmitting}
               className="w-full bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold mb-4"
             >
-              로그인
+              {isSubmitting ? "로그인 중..." : "로그인"}
             </Button>
 
             <div className="mb-6 flex items-center justify-between gap-4">
@@ -128,7 +136,7 @@ export function Login() {
                 onClick={() => navigate("/find-account")}
                 className="px-0 text-gray-600 hover:text-gray-900"
               >
-                아이디/비밀번호 찾기
+                아이디 / 비밀번호 찾기
               </Button>
               <Button
                 type="button"
@@ -141,20 +149,6 @@ export function Login() {
               </Button>
             </div>
           </Card>
-
-          <Button
-            type="button"
-            variant="outline"
-            size="lg"
-            onClick={() => {
-              setEmail("test@example.com");
-              setPassword("test1234");
-              setTimeout(() => navigate("/main"), 300);
-            }}
-            className="w-full border-gray-300 text-gray-900"
-          >
-            테스트 계정으로 로그인
-          </Button>
         </motion.div>
       </div>
     </div>

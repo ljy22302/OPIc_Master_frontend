@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "motion/react";
 import { Button } from "./ui/button";
@@ -12,12 +12,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
+import { checkUsername, signup } from "../lib/authApi";
 
 const currentYear = new Date().getFullYear();
 const years = Array.from({ length: 100 }, (_, index) => currentYear - index);
 const months = Array.from({ length: 12 }, (_, index) => String(index + 1).padStart(2, "0"));
 const days = Array.from({ length: 31 }, (_, index) => String(index + 1).padStart(2, "0"));
-
 const emailDomains = ["naver.com", "gmail.com", "daum.net", "직접입력"];
 
 export function Signup() {
@@ -26,13 +26,6 @@ export function Signup() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [phoneCode, setPhoneCode] = useState("");
-  const [sentPhoneCode, setSentPhoneCode] = useState("");
-  const [phoneCodeSent, setPhoneCodeSent] = useState(false);
-  const [phoneVerified, setPhoneVerified] = useState(false);
-  const [phoneNotice, setPhoneNotice] = useState("");
-  const [phoneCodeFeedback, setPhoneCodeFeedback] = useState("");
   const [emailLocal, setEmailLocal] = useState("");
   const [emailDomain, setEmailDomain] = useState("naver.com");
   const [customEmailDomain, setCustomEmailDomain] = useState("");
@@ -42,10 +35,44 @@ export function Signup() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [idChecked, setIdChecked] = useState(false);
+  const [isCheckingId, setIsCheckingId] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const resolvedDomain = emailDomain === "직접입력" ? customEmailDomain : emailDomain;
+  const resolvedDomain = emailDomain === "직접입력" ? customEmailDomain.trim() : emailDomain;
+  const email = useMemo(() => {
+    if (!emailLocal.trim() || !resolvedDomain.trim()) {
+      return "";
+    }
+    return `${emailLocal.trim()}@${resolvedDomain.trim()}`;
+  }, [emailLocal, resolvedDomain]);
 
-  const handleSignup = () => {
+  const birthDate =
+    birthYear && birthMonth && birthDay ? `${birthYear}-${birthMonth}-${birthDay}` : undefined;
+
+  const handleCheckUsername = async () => {
+    if (!username.trim()) {
+      setError("아이디를 먼저 입력해주세요.");
+      return;
+    }
+
+    try {
+      setIsCheckingId(true);
+      setError("");
+      const result = await checkUsername(username.trim());
+      setIdChecked(result.available);
+      setMessage(result.message);
+      if (!result.available) {
+        setError(result.message);
+      }
+    } catch (checkError) {
+      setError(checkError instanceof Error ? checkError.message : "중복 확인에 실패했습니다.");
+      setIdChecked(false);
+    } finally {
+      setIsCheckingId(false);
+    }
+  };
+
+  const handleSignup = async () => {
     setError("");
     setMessage("");
 
@@ -69,27 +96,34 @@ export function Signup() {
       return;
     }
 
-    if (!name) {
+    if (!name.trim()) {
       setError("이름을 입력해주세요.");
       return;
     }
 
-    if (!phone || phone.length < 10) {
-      setError("전화번호를 정확히 입력해주세요.");
+    if (!email || !email.includes("@")) {
+      setError("이메일을 정확히 입력해주세요.");
       return;
     }
 
-    if (!phoneCodeSent) {
-      setError("인증번호 발송을 먼저 해주세요.");
-      return;
-    }
+    try {
+      setIsSubmitting(true);
+      const result = await signup({
+        username: username.trim(),
+        password,
+        name: name.trim(),
+        email,
+        birthDate,
+      });
 
-    if (!phoneVerified) {
-      setError("전화번호 인증을 완료해주세요.");
-      return;
+      localStorage.setItem("accessToken", result.accessToken);
+      localStorage.setItem("currentUser", JSON.stringify(result.user));
+      navigate("/main");
+    } catch (signupError) {
+      setError(signupError instanceof Error ? signupError.message : "회원가입에 실패했습니다.");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setMessage("회원가입 화면입니다. 실제 회원 생성은 연결된 API에서 처리하면 됩니다.");
   };
 
   return (
@@ -102,7 +136,7 @@ export function Signup() {
         >
           <div className="mb-8 text-center">
             <h1 className="text-4xl font-bold text-gray-900">회원가입</h1>
-            <p className="mt-3 text-gray-600">회원 정보를 입력해서 다양한 OPIc 연습 경험을 만들어보세요.</p>
+            <p className="mt-3 text-gray-600">아이디, 비밀번호, 이메일로 간단하게 가입할 수 있어요.</p>
           </div>
 
           <Card className="border-2 border-yellow-200 bg-white p-6 shadow-xl md:p-8">
@@ -130,7 +164,6 @@ export function Signup() {
               <div>
                 <Label htmlFor="username" className="mb-2 block text-sm font-semibold text-gray-900">
                   <span className="text-red-500">*</span> 아이디
-                  <span className="ml-2 text-xs font-medium text-red-500">사용할 수 있는 아이디입니다</span>
                 </Label>
                 <div className="flex gap-3">
                   <Input
@@ -146,17 +179,10 @@ export function Signup() {
                   <Button
                     type="button"
                     className="h-9 min-w-24 bg-yellow-400 text-gray-900 hover:bg-yellow-500"
-                    onClick={() => {
-                      if (!username) {
-                        setError("아이디를 먼저 입력해주세요.");
-                        return;
-                      }
-                      setError("");
-                      setIdChecked(true);
-                      setMessage("아이디 중복 확인이 완료되었습니다.");
-                    }}
+                    disabled={isCheckingId}
+                    onClick={() => void handleCheckUsername()}
                   >
-                    중복 확인
+                    {isCheckingId ? "확인 중" : "중복 확인"}
                   </Button>
                 </div>
               </div>
@@ -164,7 +190,6 @@ export function Signup() {
               <div>
                 <Label htmlFor="password" className="mb-2 block text-sm font-semibold text-gray-900">
                   <span className="text-red-500">*</span> 비밀번호
-                  
                 </Label>
                 <Input
                   id="password"
@@ -174,7 +199,7 @@ export function Signup() {
                   placeholder="비밀번호 입력 (8~20자)"
                 />
                 <span className="ml-2 text-xs font-medium text-red-500">
-                    영문과 숫자, 특수기호(!, @, #, $, %, ^, &, *) 중 2개 이상을 포함한 8~20자의 비밀번호를 입력해주세요
+                  영문, 숫자, 특수문자 조합의 비밀번호를 권장합니다.
                 </span>
               </div>
 
@@ -204,102 +229,8 @@ export function Signup() {
               </div>
 
               <div>
-                <Label htmlFor="phone" className="mb-2 block text-sm font-semibold text-gray-900">
-                  <span className="text-red-500">*</span> 전화번호
-                </Label>
-                <div className="flex gap-3">
-                  <Input
-                    id="phone"
-                    value={phone}
-                    onChange={(e) => {
-                      setPhone(e.target.value);
-                      setPhoneCode("");
-                      setSentPhoneCode("");
-                      setPhoneCodeSent(false);
-                      setPhoneVerified(false);
-                      setPhoneNotice("");
-                      setPhoneCodeFeedback("");
-                    }}
-                    placeholder="전화번호 입력 ('-' 제외 11자리 입력)"
-                    className="flex-1"
-                  />
-                  <Button
-                    type="button"
-                    className="h-9 min-w-28 bg-yellow-400 text-gray-900 hover:bg-yellow-500"
-                    onClick={() => {
-                      if (!phone || phone.length < 10) {
-                        setError("전화번호를 정확히 입력해주세요.");
-                        return;
-                      }
-                      const code = String(Math.floor(100000 + Math.random() * 900000));
-                      setError("");
-                      setSentPhoneCode(code);
-                      setPhoneCodeSent(true);
-                      setPhoneVerified(false);
-                      setPhoneNotice("인증번호가 발송되었습니다.");
-                      setPhoneCodeFeedback("");
-                    }}
-                  >
-                    인증번호 발송
-                  </Button>
-                </div>
-                {phoneNotice && (
-                  <p className="mt-2 text-sm text-red-500">
-                    {phoneNotice}
-                  </p>
-                )}
-
-                {phoneCodeSent && (
-                  <>
-                    <div className="mt-3 flex gap-3">
-                      <Input
-                        value={phoneCode}
-                        onChange={(e) => {
-                          setPhoneCode(e.target.value);
-                          setPhoneVerified(false);
-                          setPhoneCodeFeedback("");
-                        }}
-                        placeholder="인증번호 입력"
-                        className="flex-1"
-                      />
-                      <Button
-                        type="button"
-                        className="h-9 min-w-28 bg-yellow-400 text-gray-900 hover:bg-yellow-500"
-                        onClick={() => {
-                          if (!phoneCode) {
-                            setPhoneVerified(false);
-                            setPhoneCodeFeedback("인증번호를 확인해주세요");
-                            return;
-                          }
-                          if (phoneCode !== sentPhoneCode) {
-                            setPhoneVerified(false);
-                            setPhoneCodeFeedback("인증번호를 확인해주세요");
-                            return;
-                          }
-
-                          setError("");
-                          setPhoneVerified(true);
-                          setPhoneCodeFeedback("인증번호 확인");
-                        }}
-                      >
-                        인증번호 확인
-                      </Button>
-                    </div>
-                    {phoneCodeFeedback && (
-                      <p
-                        className="mt-2 text-sm text-red-500"
-                      >
-                        {phoneCodeFeedback}
-                      </p>
-                    )}
-                  </>
-                )}
-              </div>
-
-              <div>
                 <Label className="mb-2 block text-sm font-semibold text-gray-900">
-                  이메일 주소
-                  <span className="ml-2 text-xs font-medium text-gray-500">선택</span>
+                  <span className="text-red-500">*</span> 이메일 주소
                 </Label>
                 <div className="flex items-center gap-2">
                   <Input
@@ -384,9 +315,10 @@ export function Signup() {
               <Button
                 type="button"
                 className="bg-yellow-400 px-8 text-gray-900 shadow-md hover:bg-yellow-500 transition-all"
-                onClick={handleSignup}
+                disabled={isSubmitting}
+                onClick={() => void handleSignup()}
               >
-                가입하기
+                {isSubmitting ? "가입 중..." : "가입하기"}
               </Button>
               <Button
                 type="button"
