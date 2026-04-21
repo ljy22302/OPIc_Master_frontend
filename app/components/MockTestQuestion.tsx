@@ -9,6 +9,9 @@ import { Progress } from "./ui/progress";
 import ossCharacter from "./OSS_character.png";
 import { mockTestQuestions } from "./mockTestQuestions";
 
+type TransitionPhase = "saving" | "preparing" | null;
+type TransitionAction = "next" | "script" | null;
+
 export function MockTestQuestion() {
   const recordingLimit = 120;
   const navigate = useNavigate();
@@ -50,6 +53,9 @@ export function MockTestQuestion() {
     const base = Array(mockTestQuestions.length).fill("");
     return base.map((value, index) => initialSavedTranscripts[index] ?? value);
   });
+  const [transitionPhase, setTransitionPhase] = useState<TransitionPhase>(null);
+  const [transitionAction, setTransitionAction] = useState<TransitionAction>(null);
+  const [transitionMessage, setTransitionMessage] = useState("");
 
   const {
     error,
@@ -141,20 +147,39 @@ export function MockTestQuestion() {
   };
 
   const handleNext = async () => {
+    if (transitionPhase || isUploading) {
+      return;
+    }
+
+    const nextAction: TransitionAction =
+      currentQuestion < mockTestQuestions.length - 1 ? "next" : "script";
     const currentAnswer = isRecording ? await stopRecording() : transcript;
     const nextSavedTranscripts = [...savedTranscripts];
     nextSavedTranscripts[currentQuestion] = currentAnswer.trim();
     setSavedTranscripts(nextSavedTranscripts);
 
-    if (currentQuestion < mockTestQuestions.length - 1) {
+    setTransitionAction(nextAction);
+    setTransitionMessage(
+      nextAction === "script" ? "스크립트 화면으로 이동 중입니다..." : "Saving your answer..."
+    );
+    setTransitionPhase("saving");
+
+    const transitionDelay = (ms: number) =>
+      new Promise((resolve) => setTimeout(resolve, ms));
+
+    await transitionDelay(1000);
+
+    if (nextAction === "next") {
+      setTransitionPhase("preparing");
+      setTransitionMessage("다음 문제로 이동 중입니다...");
+      await transitionDelay(1000);
       setCurrentQuestion((prev) => prev + 1);
       setRecordingTime(recordingLimit);
       setPlayCount(0);
       setShowQuestion(false);
       setShowTranslation(false);
       resetTranscript();
-      stopRecording(true);
-    } else {
+    } else if (nextAction === "script") {
       navigate("/mocktest/script", {
         state: {
           questionCount: mockTestQuestions.length,
@@ -170,6 +195,10 @@ export function MockTestQuestion() {
         },
       });
     }
+
+    setTransitionPhase(null);
+    setTransitionAction(null);
+    setTransitionMessage("");
   };
 
   return (
@@ -462,6 +491,24 @@ export function MockTestQuestion() {
           {currentQuestion < mockTestQuestions.length - 1 ? "Next Question" : "Finish Test"}
         </Button>
       </div>
+
+      {transitionPhase && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-md rounded-3xl border border-yellow-200 bg-white p-8 shadow-2xl"
+          >
+            <div className="mb-6 flex justify-center">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-yellow-400">
+                <div className="h-7 w-7 animate-spin rounded-full border-4 border-white border-t-transparent" />
+              </div>
+            </div>
+            <p className="text-center text-2xl font-bold text-gray-900">{transitionMessage}</p>
+            <p className="mt-3 text-center text-sm text-gray-600">잠시만 기다려주세요.</p>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }
