@@ -1,0 +1,92 @@
+export const mockTestQuestions = [
+  {
+    id: 1,
+    type: "Self-Intro",
+    text: "Let's start the interview now. Tell me about yourself.",
+    translation: "이제 인터뷰를 시작하겠습니다. 자기소개를 해주세요.",
+  },
+  {
+    id: 2,
+    type: "Topic",
+    text: "Tell me about your favorite cafe and why you like going there.",
+    translation: "당신이 가장 좋아하는 카페와 그곳을 좋아하는 이유를 말해주세요.",
+  },
+  {
+    id: 3,
+    type: "Topic",
+    text: "Describe the atmosphere and interior of that cafe in detail.",
+    translation: "그 카페의 분위기와 내부 인테리어를 자세히 설명해주세요.",
+  },
+  {
+    id: 4,
+    type: "Topic",
+    text: "Tell me about a memorable experience you had at a cafe.",
+    translation: "카페에서 있었던 기억에 남는 경험에 대해 말해주세요.",
+  },
+  {
+    id: 5,
+    type: "Topic",
+    text: "Tell me about a recent trip you took. Where did you go?",
+    translation: "최근에 다녀온 여행에 대해 말해주세요. 어디에 갔나요?",
+  },
+  {
+    id: 6,
+    type: "Topic",
+    text: "What activities did you do during your trip?",
+    translation: "여행 중에 어떤 활동을 했는지 말해주세요.",
+  },
+  {
+    id: 7,
+    type: "Topic",
+    text: "Compare traveling now to traveling in the past.",
+    translation: "지금의 여행과 과거의 여행을 비교해보세요.",
+  },
+  {
+    id: 8,
+    type: "Topic",
+    text: "What kind of exercise do you do regularly?",
+    translation: "당신은 평소에 어떤 운동을 하나요?",
+  },
+  {
+    id: 9,
+    type: "Topic",
+    text: "Describe your exercise routine in detail.",
+    translation: "운동 루틴을 자세히 설명해주세요.",
+  },
+  {
+    id: 10,
+    type: "Topic",
+    text: "Tell me about a time when you achieved a fitness goal.",
+    translation: "운동 목표를 달성했던 경험에 대해 말해주세요.",
+  },
+  {
+    id: 11,
+    type: "Role Play",
+    text: "Your friend wants to join your gym. Call the gym and ask about membership options.",
+    translation: "친구가 헬스장에 등록하고 싶어합니다. 헬스장에 전화해서 회원권 옵션을 물어보세요.",
+  },
+  {
+    id: 12,
+    type: "Role Play",
+    text: "There's a problem with your membership. Call and explain the issue.",
+    translation: "회원권에 문제가 생겼습니다. 전화해서 문제를 설명하세요.",
+  },
+  {
+    id: 13,
+    type: "Role Play",
+    text: "Suggest an alternative solution for the membership problem.",
+    translation: "회원권 문제에 대한 다른 해결책을 제안하세요.",
+  },
+  {
+    id: 14,
+    type: "Follow-up",
+    text: "Describe a challenge you faced recently and how you overcame it.",
+    translation: "최근에 겪은 어려움과 그것을 어떻게 극복했는지 설명하세요.",
+  },
+  {
+    id: 15,
+    type: "Follow-up",
+    text: "What are your plans for the next few years?",
+    translation: "앞으로 몇 년간의 계획이 무엇인지 말해주세요.",
+  },
+] as const;

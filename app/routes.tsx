@@ -11,6 +11,7 @@ import { PracticeScript } from "./components/PracticeScript";
 import { PracticeResult } from "./components/PracticeResult";
 import { MockTestSetup } from "./components/MockTestSetup";
 import { MockTestQuestion } from "./components/MockTestQuestion";
+import { MockTestScript } from "./components/MockTestScript";
 import { MockTestResult } from "./components/MockTestResult";
 import { SavedQuestions } from "./components/SavedQuestions";
 import { Resources } from "./components/Resources";
@@ -31,6 +32,7 @@ export const router = createBrowserRouter([
       { path: "practice/result", Component: PracticeResult },
       { path: "mocktest/setup", Component: MockTestSetup },
       { path: "mocktest/question", Component: MockTestQuestion },
+      { path: "mocktest/script", Component: MockTestScript },
       { path: "mocktest/result", Component: MockTestResult },
       { path: "saved", Component: SavedQuestions },
       { path: "resources", Component: Resources },

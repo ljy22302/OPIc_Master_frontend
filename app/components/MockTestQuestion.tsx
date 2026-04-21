@@ -7,99 +7,7 @@ import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Progress } from "./ui/progress";
 import ossCharacter from "./OSS_character.png";
-
-const mockQuestions = [
-  {
-    id: 1,
-    type: "Self-Intro",
-    text: "Let's start the interview now. Tell me about yourself.",
-    translation: "이제 인터뷰를 시작하겠습니다. 자기소개를 해주세요.",
-  },
-  {
-    id: 2,
-    type: "Topic",
-    text: "Tell me about your favorite cafe and why you like going there.",
-    translation: "당신이 가장 좋아하는 카페와 그곳을 좋아하는 이유를 말해주세요.",
-  },
-  {
-    id: 3,
-    type: "Topic",
-    text: "Describe the atmosphere and interior of that cafe in detail.",
-    translation: "그 카페의 분위기와 내부 인테리어를 자세히 설명해주세요.",
-  },
-  {
-    id: 4,
-    type: "Topic",
-    text: "Tell me about a memorable experience you had at a cafe.",
-    translation: "카페에서 있었던 기억에 남는 경험에 대해 말해주세요.",
-  },
-  {
-    id: 5,
-    type: "Topic",
-    text: "Tell me about a recent trip you took. Where did you go?",
-    translation: "최근에 다녀온 여행에 대해 말해주세요. 어디에 갔나요?",
-  },
-  {
-    id: 6,
-    type: "Topic",
-    text: "What activities did you do during your trip?",
-    translation: "여행 중에 어떤 활동을 했는지 말해주세요.",
-  },
-  {
-    id: 7,
-    type: "Topic",
-    text: "Compare traveling now to traveling in the past.",
-    translation: "지금의 여행과 과거의 여행을 비교해보세요.",
-  },
-  {
-    id: 8,
-    type: "Topic",
-    text: "What kind of exercise do you do regularly?",
-    translation: "당신은 평소에 어떤 운동을 하나요?",
-  },
-  {
-    id: 9,
-    type: "Topic",
-    text: "Describe your exercise routine in detail.",
-    translation: "운동 루틴을 자세히 설명해주세요.",
-  },
-  {
-    id: 10,
-    type: "Topic",
-    text: "Tell me about a time when you achieved a fitness goal.",
-    translation: "운동 목표를 달성했던 경험에 대해 말해주세요.",
-  },
-  {
-    id: 11,
-    type: "Role Play",
-    text: "Your friend wants to join your gym. Call the gym and ask about membership options.",
-    translation: "친구가 헬스장에 등록하고 싶어합니다. 헬스장에 전화해서 회원권 옵션을 물어보세요.",
-  },
-  {
-    id: 12,
-    type: "Role Play",
-    text: "There's a problem with your membership. Call and explain the issue.",
-    translation: "회원권에 문제가 생겼습니다. 전화해서 문제를 설명하세요.",
-  },
-  {
-    id: 13,
-    type: "Role Play",
-    text: "Suggest an alternative solution for the membership problem.",
-    translation: "회원권 문제에 대한 다른 해결책을 제안하세요.",
-  },
-  {
-    id: 14,
-    type: "Follow-up",
-    text: "Describe a challenge you faced recently and how you overcame it.",
-    translation: "최근에 겪은 어려움과 그것을 어떻게 극복했는지 설명하세요.",
-  },
-  {
-    id: 15,
-    type: "Follow-up",
-    text: "What are your plans for the next few years?",
-    translation: "앞으로 몇 년간의 계획이 무엇인지 말해주세요.",
-  },
-];
+import { mockTestQuestions } from "./mockTestQuestions";
 
 export function MockTestQuestion() {
   const recordingLimit = 120;
@@ -115,6 +23,8 @@ export function MockTestQuestion() {
     selectedHobbies = [],
     selectedExercises = [],
     selectedTravel = [],
+    currentQuestion: initialCurrentQuestion = 0,
+    savedTranscripts: initialSavedTranscripts = [] as string[],
   } = (location.state as {
     difficulty?: string;
     currentStatus?: string;
@@ -124,14 +34,22 @@ export function MockTestQuestion() {
     selectedHobbies?: string[];
     selectedExercises?: string[];
     selectedTravel?: string[];
+    currentQuestion?: number;
+    savedTranscripts?: string[];
   }) ?? {};
 
-  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [currentQuestion, setCurrentQuestion] = useState(() =>
+    Math.min(initialCurrentQuestion, mockTestQuestions.length - 1)
+  );
   const [totalTime, setTotalTime] = useState(2400);
   const [recordingTime, setRecordingTime] = useState(recordingLimit);
   const [playCount, setPlayCount] = useState(0);
   const [showQuestion, setShowQuestion] = useState(false);
   const [showTranslation, setShowTranslation] = useState(false);
+  const [savedTranscripts, setSavedTranscripts] = useState<string[]>(() => {
+    const base = Array(mockTestQuestions.length).fill("");
+    return base.map((value, index) => initialSavedTranscripts[index] ?? value);
+  });
 
   const {
     error,
@@ -140,8 +58,9 @@ export function MockTestQuestion() {
     resetTranscript,
     startRecording,
     stopRecording,
+    transcript,
   } = useSpeechToTextRecorder({
-    questionId: `mock-test-${mockQuestions[currentQuestion].id}`,
+    questionId: `mock-test-${mockTestQuestions[currentQuestion].id}`,
     language: "en",
   });
 
@@ -175,7 +94,7 @@ export function MockTestQuestion() {
     return `+${formatTime(Math.abs(seconds))}`;
   };
 
-  const totalProgress = ((currentQuestion + 1) / mockQuestions.length) * 100;
+  const totalProgress = ((currentQuestion + 1) / mockTestQuestions.length) * 100;
   const recordingProgress = Math.min(
     ((recordingLimit - Math.max(recordingTime, 0)) / recordingLimit) * 100,
     100
@@ -185,8 +104,8 @@ export function MockTestQuestion() {
     100
   );
   const isOvertime = recordingTime < 0;
-  const progressSteps = Array.from({ length: mockQuestions.length }, (_, index) => index + 1);
-  const currentQ = mockQuestions[currentQuestion];
+  const progressSteps = Array.from({ length: mockTestQuestions.length }, (_, index) => index + 1);
+  const currentQ = mockTestQuestions[currentQuestion];
 
   const difficultyLabel = difficulty === "3-4" ? "Level 3-4" : difficulty === "5-6" ? "Level 5-6" : "";
   const statusLabel = {
@@ -221,8 +140,13 @@ export function MockTestQuestion() {
     stopRecording();
   };
 
-  const handleNext = () => {
-    if (currentQuestion < mockQuestions.length - 1) {
+  const handleNext = async () => {
+    const currentAnswer = isRecording ? await stopRecording() : transcript;
+    const nextSavedTranscripts = [...savedTranscripts];
+    nextSavedTranscripts[currentQuestion] = currentAnswer.trim();
+    setSavedTranscripts(nextSavedTranscripts);
+
+    if (currentQuestion < mockTestQuestions.length - 1) {
       setCurrentQuestion((prev) => prev + 1);
       setRecordingTime(recordingLimit);
       setPlayCount(0);
@@ -231,7 +155,20 @@ export function MockTestQuestion() {
       resetTranscript();
       stopRecording(true);
     } else {
-      navigate("/mocktest/result");
+      navigate("/mocktest/script", {
+        state: {
+          questionCount: mockTestQuestions.length,
+          transcripts: nextSavedTranscripts,
+          difficulty,
+          currentStatus,
+          studentStatus,
+          livingSituation,
+          selectedLeisure,
+          selectedHobbies,
+          selectedExercises,
+          selectedTravel,
+        },
+      });
     }
   };
 
@@ -255,7 +192,7 @@ export function MockTestQuestion() {
               <div className="text-center">
                 <p className="text-xs text-gray-500">Question</p>
                 <p className="text-sm font-bold text-gray-900">
-                  {currentQuestion + 1} / {mockQuestions.length}
+                  {currentQuestion + 1} / {mockTestQuestions.length}
                 </p>
               </div>
               <div className="text-center">
@@ -522,7 +459,7 @@ export function MockTestQuestion() {
           onClick={handleNext}
           className="w-full bg-yellow-400 text-gray-900 hover:bg-yellow-500"
         >
-          {currentQuestion < mockQuestions.length - 1 ? "Next Question" : "Finish Test"}
+          {currentQuestion < mockTestQuestions.length - 1 ? "Next Question" : "Finish Test"}
         </Button>
       </div>
     </div>
