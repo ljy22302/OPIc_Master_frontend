@@ -28,11 +28,21 @@ type EvaluationResultViewProps = {
   onNavigate: (path: string) => void;
 };
 
+const CATEGORY_LABELS: Record<string, string> = {
+  grammar: "문법",
+  fluency: "유창성",
+  vocabulary: "어휘",
+  completion: "답변 완성도",
+  relevance: "질문 적합도",
+  speed: "속도",
+  engagement: "호응 유도",
+};
+
 function MetricItem({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-3">
-      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</p>
-      <p className="mt-1 text-sm font-medium text-gray-900">{value}</p>
+      <p className="text-xs font-semibold tracking-wide text-gray-500">{label}</p>
+      <p className="mt-1 text-sm font-medium text-gray-900 whitespace-pre-wrap">{value}</p>
     </div>
   );
 }
@@ -72,11 +82,7 @@ export function EvaluationResultView({
         if (!isMounted) {
           return;
         }
-        setPageError(
-          loadError instanceof Error
-            ? loadError.message
-            : "Failed to load the evaluation result.",
-        );
+        setPageError(loadError instanceof Error ? loadError.message : "평가 결과를 불러오지 못했습니다.");
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -103,11 +109,7 @@ export function EvaluationResultView({
       await saveEvaluatedAnswer(answerId);
       setSavedAnswerIds((current) => (current.includes(answerId) ? current : [...current, answerId]));
     } catch (saveError) {
-      setPageError(
-        saveError instanceof Error
-          ? saveError.message
-          : "Failed to save this question and answer.",
-      );
+      setPageError(saveError instanceof Error ? saveError.message : "문제와 답변 저장에 실패했습니다.");
     }
   };
 
@@ -120,7 +122,7 @@ export function EvaluationResultView({
 
     return Object.entries(overall.categoryScores).map(([key, value]) => ({
       key,
-      label: key.replace(/([A-Z])/g, " $1"),
+      label: CATEGORY_LABELS[key] || key,
       value,
     }));
   }, [overall]);
@@ -128,11 +130,7 @@ export function EvaluationResultView({
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="mx-auto max-w-5xl">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8 text-center"
-        >
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8 text-center">
           <div className="mb-4 inline-flex h-20 w-20 items-center justify-center rounded-full bg-yellow-400">
             <CheckCircle2 className="h-10 w-10 text-gray-900" />
           </div>
@@ -140,7 +138,7 @@ export function EvaluationResultView({
           <p className="text-gray-600">{subtitle}</p>
           {showPracticeNotice && (
             <p className="mt-3 text-sm text-gray-500">
-              Practice-mode grade estimates are helpful signals, but they are less reliable than a full mock test.
+              연습 모드의 예상 등급은 참고용이며, 실제 모의고사 결과보다 정확도가 낮을 수 있습니다.
             </p>
           )}
         </motion.div>
@@ -153,22 +151,18 @@ export function EvaluationResultView({
 
         {isLoading ? (
           <Card className="mb-8 bg-white p-6 text-sm text-gray-500">
-            Loading your saved evaluation result...
+            저장된 평가 결과를 불러오는 중...
           </Card>
         ) : (
           <>
             {overall && (
               <>
                 <div className="mb-8 grid gap-6 md:grid-cols-2">
-                  <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.2 }}
-                  >
+                  <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}>
                     <Card className="h-full bg-white p-6">
                       <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-gray-900">
                         <CheckCircle2 className="h-5 w-5 text-green-500" />
-                        Strengths
+                        강점
                       </h3>
                       <ul className="space-y-3">
                         {overall.strengths.map((item, index) => (
@@ -181,15 +175,11 @@ export function EvaluationResultView({
                     </Card>
                   </motion.div>
 
-                  <motion.div
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.2 }}
-                  >
+                  <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}>
                     <Card className="h-full bg-white p-6">
                       <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-gray-900">
                         <TrendingUp className="h-5 w-5 text-orange-500" />
-                        Improvements
+                        개선 포인트
                       </h3>
                       <ul className="space-y-3">
                         {overall.weaknesses.map((item, index) => (
@@ -206,10 +196,10 @@ export function EvaluationResultView({
                 <Card className="mb-8 bg-white p-6">
                   <div className="mb-4 flex flex-wrap items-center gap-3">
                     <span className="rounded-full bg-yellow-100 px-3 py-1 text-sm font-semibold text-yellow-800">
-                      Estimated Grade: {overall.estimatedGrade || "Not enough data"}
+                      예상 등급: {overall.estimatedGrade || "데이터 부족"}
                     </span>
                     <span className="rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-700">
-                      {overall.isGradable ? "Gradable" : "Partially gradable"}
+                      {overall.isGradable ? "채점 가능" : "부분 채점"}
                     </span>
                   </div>
                   <p className="mb-4 text-sm text-gray-700">{overall.feedback.summary}</p>
@@ -223,23 +213,16 @@ export function EvaluationResultView({
               </>
             )}
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="mb-8"
-            >
-              <h3 className="mb-4 text-xl font-semibold text-gray-900">Question-by-Question Feedback</h3>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="mb-8">
+              <h3 className="mb-4 text-xl font-semibold text-gray-900">문항별 피드백</h3>
               <div className="space-y-4">
                 {answers.map((answer, index) => (
                   <Card key={answer.id} className="bg-white p-6">
                     <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div>
-                        <h4 className="font-semibold text-gray-900">
-                          Q{index + 1}. {answer.questionText}
-                        </h4>
+                        <h4 className="font-semibold text-gray-900">Q{index + 1}. {answer.questionText}</h4>
                         <p className="mt-1 text-sm text-gray-500">
-                          Grade estimate: {answer.estimatedSubGrade || "Not enough data"}
+                          예상 등급: {answer.estimatedSubGrade || "데이터 부족"}
                         </p>
                       </div>
                       <Button
@@ -251,7 +234,7 @@ export function EvaluationResultView({
                         className="shrink-0 gap-2"
                       >
                         <Bookmark className="h-4 w-4" />
-                        {savedAnswerIds.includes(answer.id) ? "Saved" : "Save Question And Answer"}
+                        {savedAnswerIds.includes(answer.id) ? "저장됨" : "문제 및 답변 저장"}
                       </Button>
                     </div>
 
@@ -263,48 +246,38 @@ export function EvaluationResultView({
 
                     <div className="mb-4 grid gap-4 lg:grid-cols-3">
                       <div className="rounded-lg bg-gray-50 p-4">
-                        <p className="mb-2 text-sm font-semibold text-gray-700">Original Transcript</p>
+                        <p className="mb-2 text-sm font-semibold text-gray-700">원본 스크립트</p>
                         <p className="text-sm leading-6 text-gray-800">
-                          {answer.originalTranscript || "No original transcript"}
+                          {answer.originalTranscript || "원본 스크립트 없음"}
                         </p>
                       </div>
                       <div className="rounded-lg bg-gray-50 p-4">
-                        <p className="mb-2 text-sm font-semibold text-gray-700">Edited Transcript</p>
+                        <p className="mb-2 text-sm font-semibold text-gray-700">수정한 스크립트</p>
                         <p className="text-sm leading-6 text-gray-800">
-                          {answer.editedTranscript || "No edited transcript"}
+                          {answer.editedTranscript || "수정한 스크립트 없음"}
                         </p>
                       </div>
                       <div className="rounded-lg bg-yellow-50 p-4">
-                        <p className="mb-2 text-sm font-semibold text-gray-700">Used Transcript</p>
+                        <p className="mb-2 text-sm font-semibold text-gray-700">평가에 사용된 스크립트</p>
                         <div className="relative">
-                          <p
-                            className={`text-sm leading-6 text-gray-800 ${
-                              expandedAnswers.includes(index) ? "" : "max-h-28 overflow-hidden"
-                            }`}
-                          >
-                            {answer.usedTranscript || "No transcript used for evaluation"}
+                          <p className={`text-sm leading-6 text-gray-800 ${expandedAnswers.includes(index) ? "" : "max-h-28 overflow-hidden"}`}>
+                            {answer.usedTranscript || "평가에 사용된 스크립트 없음"}
                           </p>
                           {!expandedAnswers.includes(index) && answer.usedTranscript && (
                             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-yellow-50 to-transparent" />
                           )}
                         </div>
                         <div className="mt-3 flex justify-end">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => toggleAnswer(index)}
-                            className="gap-1 text-gray-600 hover:text-gray-900"
-                          >
+                          <Button type="button" variant="ghost" size="sm" onClick={() => toggleAnswer(index)} className="gap-1 text-gray-600 hover:text-gray-900">
                             {expandedAnswers.includes(index) ? (
                               <>
                                 <ChevronUp className="h-4 w-4" />
-                                Collapse
+                                접기
                               </>
                             ) : (
                               <>
                                 <ChevronDown className="h-4 w-4" />
-                                Expand
+                                더보기
                               </>
                             )}
                           </Button>
@@ -313,19 +286,19 @@ export function EvaluationResultView({
                     </div>
 
                     <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                      <MetricItem label="Words" value={`${answer.metrics.wordCount}`} />
-                      <MetricItem label="Sentences" value={`${answer.metrics.sentenceCount}`} />
-                      <MetricItem label="Avg Sentence" value={`${answer.metrics.avgSentenceLength}`} />
-                      <MetricItem label="Speech Rate" value={`${answer.metrics.speechRateWpm} wpm`} />
-                      <MetricItem label="Keyword Match" value={`${Math.round(answer.metrics.keywordSimilarity * 100)}%`} />
-                      <MetricItem label="Lexical Diversity" value={`${Math.round(answer.metrics.lexicalDiversity * 100)}%`} />
-                      <MetricItem label="Silence Ratio" value={`${Math.round(answer.metrics.silenceRatio * 100)}%`} />
-                      <MetricItem label="Transcript Confidence" value={`${Math.round((answer.transcriptConfidence || 0) * 100)}%`} />
+                      <MetricItem label="단어 수" value={`${answer.metrics.wordCount}`} />
+                      <MetricItem label="문장 수" value={`${answer.metrics.sentenceCount}`} />
+                      <MetricItem label="평균 문장 길이" value={`${answer.metrics.avgSentenceLength}`} />
+                      <MetricItem label="말하기 속도" value={`${answer.metrics.speechRateWpm} wpm`} />
+                      <MetricItem label="질문 키워드 일치도" value={`${Math.round(answer.metrics.keywordSimilarity * 100)}%`} />
+                      <MetricItem label="어휘 다양성" value={`${Math.round(answer.metrics.lexicalDiversity * 100)}%`} />
+                      <MetricItem label="침묵 비율" value={`${Math.round(answer.metrics.silenceRatio * 100)}%`} />
+                      <MetricItem label="STT 신뢰도" value={`${Math.round((answer.transcriptConfidence || 0) * 100)}%`} />
                     </div>
 
                     <div className="mb-4 grid gap-4 lg:grid-cols-2">
                       <div className="rounded-lg bg-green-50 p-4">
-                        <p className="mb-2 text-sm font-semibold text-gray-700">Strengths</p>
+                        <p className="mb-2 text-sm font-semibold text-gray-700">강점</p>
                         <ul className="space-y-2 text-sm text-gray-800">
                           {answer.feedback.strengths.map((item, itemIndex) => (
                             <li key={itemIndex}>+ {item}</li>
@@ -333,7 +306,7 @@ export function EvaluationResultView({
                         </ul>
                       </div>
                       <div className="rounded-lg bg-orange-50 p-4">
-                        <p className="mb-2 text-sm font-semibold text-gray-700">Weaknesses</p>
+                        <p className="mb-2 text-sm font-semibold text-gray-700">약점</p>
                         <ul className="space-y-2 text-sm text-gray-800">
                           {answer.feedback.weaknesses.map((item, itemIndex) => (
                             <li key={itemIndex}>! {item}</li>
@@ -343,30 +316,30 @@ export function EvaluationResultView({
                     </div>
 
                     <div className="mb-4 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                      <MetricItem label="Grammar" value={`${answer.feedback.scores.grammar}`} />
-                      <MetricItem label="Fluency" value={`${answer.feedback.scores.fluency}`} />
-                      <MetricItem label="Vocabulary" value={`${answer.feedback.scores.vocabulary}`} />
-                      <MetricItem label="Completion" value={`${answer.feedback.scores.completion}`} />
-                      <MetricItem label="Relevance" value={`${answer.feedback.scores.relevance}`} />
-                      <MetricItem label="Engagement" value={`${answer.feedback.scores.engagement}`} />
+                      <MetricItem label="문법" value={`${answer.feedback.scores.grammar}`} />
+                      <MetricItem label="유창성" value={`${answer.feedback.scores.fluency}`} />
+                      <MetricItem label="어휘" value={`${answer.feedback.scores.vocabulary}`} />
+                      <MetricItem label="답변 완성도" value={`${answer.feedback.scores.completion}`} />
+                      <MetricItem label="질문 적합도" value={`${answer.feedback.scores.relevance}`} />
+                      <MetricItem label="호응 유도" value={`${answer.feedback.scores.engagement}`} />
                     </div>
 
                     <div className="space-y-3 rounded-lg bg-yellow-50 p-4">
-                      <p className="text-sm font-semibold text-gray-700">Detailed Coaching</p>
+                      <p className="text-sm font-semibold text-gray-700">상세 코칭</p>
                       <div className="grid gap-3 md:grid-cols-2">
-                        <MetricItem label="Grammar" value={answer.feedback.feedback.grammar} />
-                        <MetricItem label="Fluency" value={answer.feedback.feedback.fluency} />
-                        <MetricItem label="Vocabulary" value={answer.feedback.feedback.vocabulary} />
-                        <MetricItem label="Completion" value={answer.feedback.feedback.completion} />
-                        <MetricItem label="Relevance" value={answer.feedback.feedback.relevance} />
-                        <MetricItem label="Speed" value={answer.feedback.feedback.speed} />
-                        <MetricItem label="Sentence Length" value={answer.feedback.sentenceLength} />
-                        <MetricItem label="Answer Time" value={answer.feedback.answerTime} />
-                        <MetricItem label="Repetition" value={answer.feedback.repetitionRate} />
-                        <MetricItem label="Keyword Similarity" value={answer.feedback.keywordSimilarity} />
+                        <MetricItem label="문법" value={answer.feedback.feedback.grammar} />
+                        <MetricItem label="유창성" value={answer.feedback.feedback.fluency} />
+                        <MetricItem label="어휘" value={answer.feedback.feedback.vocabulary} />
+                        <MetricItem label="답변 완성도" value={answer.feedback.feedback.completion} />
+                        <MetricItem label="질문 적합도" value={answer.feedback.feedback.relevance} />
+                        <MetricItem label="속도" value={answer.feedback.feedback.speed} />
+                        <MetricItem label="문장 길이" value={answer.feedback.sentenceLength} />
+                        <MetricItem label="답변 시간" value={answer.feedback.answerTime} />
+                        <MetricItem label="반복 표현" value={answer.feedback.repetitionRate} />
+                        <MetricItem label="키워드 유사도" value={answer.feedback.keywordSimilarity} />
                       </div>
                       <div className="rounded-xl border border-yellow-100 bg-white p-4">
-                        <p className="mb-2 text-sm font-semibold text-gray-700">Improvement Tips</p>
+                        <p className="mb-2 text-sm font-semibold text-gray-700">개선 팁</p>
                         <ul className="space-y-2 text-sm text-gray-800">
                           {answer.feedback.tips.map((tip, tipIndex) => (
                             <li key={tipIndex}>- {tip}</li>
@@ -381,23 +354,18 @@ export function EvaluationResultView({
           </>
         )}
 
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4 }}
-          className="grid gap-4 md:grid-cols-3"
-        >
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} className="grid gap-4 md:grid-cols-3">
           <Button variant="outline" onClick={() => onNavigate(restartPath)} className="gap-2">
             <RotateCcw className="h-4 w-4" />
-            Restart
+            다시 하기
           </Button>
           <Button variant="outline" onClick={() => onNavigate("/resources")} className="gap-2">
             <BookOpen className="h-4 w-4" />
-            Study Resources
+            학습 자료 보기
           </Button>
           <Button onClick={() => onNavigate("/main")} className="gap-2 bg-yellow-400 text-gray-900 hover:bg-yellow-500">
             <Home className="h-4 w-4" />
-            Home
+            메인으로
           </Button>
         </motion.div>
       </div>

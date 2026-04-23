@@ -19,8 +19,8 @@ export function PracticeResult() {
     <EvaluationResultView
       sessionId={sessionId}
       initialSessionResult={sessionResult}
-      title="Practice Complete"
-      subtitle="Your answer transcripts, metrics, and feedback are now loaded from the backend."
+      title="연습 완료"
+      subtitle="질문별 답변 스크립트와 평가 결과를 확인해보세요."
       restartPath="/practice/setup"
       showPracticeNotice
       onNavigate={(path) => navigate(path)}

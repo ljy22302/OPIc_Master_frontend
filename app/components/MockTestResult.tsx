@@ -19,8 +19,8 @@ export function MockTestResult() {
     <EvaluationResultView
       sessionId={sessionId}
       initialSessionResult={sessionResult}
-      title="Mock Test Complete"
-      subtitle="Your mock test result now uses saved backend evaluation data instead of hardcoded feedback."
+      title="모의고사 완료"
+      subtitle="저장된 실제 평가 결과를 기반으로 문항별 피드백을 확인해보세요."
       restartPath="/mocktest/setup"
       onNavigate={(path) => navigate(path)}
     />
