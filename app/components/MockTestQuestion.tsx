@@ -472,17 +472,6 @@ export function MockTestQuestion() {
 
         </Card>
 
-        {currentQ.type !== "Role Play" && (
-          <Card className="mb-6 border-yellow-200 bg-yellow-50 p-4">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-gray-900" />
-              <p className="text-sm text-gray-700">
-                Hints and saved-question features are not available during the mock test.
-              </p>
-            </div>
-          </Card>
-        )}
-
         <Button
           size="lg"
           onClick={handleNext}
