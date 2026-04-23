@@ -3,6 +3,7 @@ import { Root } from "./components/Root";
 import { Login } from "./components/Login";
 import { FindAccount } from "./components/FindAccount";
 import { Signup } from "./components/Signup";
+import { ResetPassword } from "./components/ResetPassword";
 import { Intro } from "./components/Intro";
 import { Main } from "./components/Main";
 import { PracticeSetup } from "./components/PracticeSetup";
@@ -24,6 +25,7 @@ export const router = createBrowserRouter([
       { index: true, Component: Login },
       { path: "find-account", Component: FindAccount },
       { path: "signup", Component: Signup },
+      { path: "reset-password", Component: ResetPassword },
       { path: "intro", Component: Intro },
       { path: "main", Component: Main },
       { path: "practice/setup", Component: PracticeSetup },

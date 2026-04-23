@@ -101,3 +101,10 @@ export function requestPasswordReset(payload: { username: string; email: string 
     body: JSON.stringify(payload),
   });
 }
+
+export function confirmPasswordReset(payload: { token: string; newPassword: string }) {
+  return request<AuthMessageResponse>("/api/auth/reset-password/confirm", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
