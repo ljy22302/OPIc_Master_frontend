@@ -1,14 +1,23 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { motion } from "motion/react";
-import { ArrowLeft, Check, ChevronRight, PencilLine, RotateCcw, Volume2, X } from "lucide-react";
+import { ArrowLeft, Check, ChevronRight, PencilLine, RotateCcw, X } from "lucide-react";
+import {
+  completeEvaluationSession,
+  getEvaluationSessionResult,
+  reEvaluateAnswer,
+  updateAnswerTranscript,
+  type EvaluationAnswer,
+  type EvaluationSession,
+} from "../lib/evaluationApi";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { mockTestQuestions } from "./mockTestQuestions";
 
 type MockTestScriptState = {
+  sessionId?: number;
   questionCount?: number;
-  transcripts?: string[];
+  questionResults?: EvaluationAnswer[];
   difficulty?: string;
   currentStatus?: string;
   studentStatus?: string;
@@ -22,9 +31,11 @@ type MockTestScriptState = {
 export function MockTestScript() {
   const navigate = useNavigate();
   const location = useLocation();
+  const query = new URLSearchParams(location.search);
   const {
+    sessionId: stateSessionId,
     questionCount = mockTestQuestions.length,
-    transcripts = [],
+    questionResults: initialQuestionResults = [],
     difficulty = "",
     currentStatus = "",
     studentStatus = "",
@@ -35,41 +46,91 @@ export function MockTestScript() {
     selectedTravel = [],
   } = (location.state as MockTestScriptState) ?? {};
 
+  const querySessionId = Number(query.get("sessionId") || 0);
+  const sessionId = stateSessionId ?? (querySessionId || null);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [draftAnswer, setDraftAnswer] = useState("");
-  const [editedTranscripts, setEditedTranscripts] = useState<string[]>(() =>
-    Array.from({ length: questionCount }, (_, index) => transcripts[index] ?? "")
-  );
+  const [questionResults, setQuestionResults] = useState<EvaluationAnswer[]>(initialQuestionResults);
   const [transitionPhase, setTransitionPhase] = useState<"saving" | "preparing" | null>(null);
   const [transitionMessage, setTransitionMessage] = useState("");
+  const [pageError, setPageError] = useState("");
+  const [isLoading, setIsLoading] = useState(initialQuestionResults.length === 0);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
-  const visibleQuestions = mockTestQuestions.slice(0, questionCount);
-  const activeTranscripts = editedTranscripts;
+  const visibleQuestions = useMemo(
+    () => mockTestQuestions.slice(0, questionCount),
+    [questionCount],
+  );
 
-  const handleReplayAnswer = (answer: string) => {
-    const text = answer.trim();
-    if (!text || typeof window === "undefined" || !window.speechSynthesis) {
-      return;
+  useEffect(() => {
+    let isMounted = true;
+
+    if (!sessionId || initialQuestionResults.length > 0) {
+      setIsLoading(false);
+      return undefined;
     }
 
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "en-US";
-    utterance.rate = 0.95;
-    window.speechSynthesis.speak(utterance);
-  };
+    const run = async () => {
+      try {
+        setIsLoading(true);
+        const session = await getEvaluationSessionResult(sessionId);
+        if (!isMounted) {
+          return;
+        }
+        setQuestionResults(session.answers);
+      } catch (loadError) {
+        if (!isMounted) {
+          return;
+        }
+        setPageError(
+          loadError instanceof Error
+            ? loadError.message
+            : "Failed to load mock test answers.",
+        );
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void run();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [initialQuestionResults.length, sessionId]);
 
   const startEdit = (index: number) => {
     setEditingIndex(index);
-    setDraftAnswer(activeTranscripts[index] ?? "");
+    setDraftAnswer(questionResults[index]?.usedTranscript || "");
   };
 
-  const saveEdit = (index: number) => {
-    const nextTranscripts = [...activeTranscripts];
-    nextTranscripts[index] = draftAnswer;
-    setEditedTranscripts(nextTranscripts);
-    setEditingIndex(null);
-    setDraftAnswer("");
+  const saveEdit = async (index: number) => {
+    const answer = questionResults[index];
+    if (!answer) {
+      return;
+    }
+
+    try {
+      setIsSavingEdit(true);
+      setPageError("");
+      await updateAnswerTranscript(answer.id, draftAnswer);
+      const refreshedAnswer = await reEvaluateAnswer(answer.id);
+      const nextResults = [...questionResults];
+      nextResults[index] = refreshedAnswer;
+      setQuestionResults(nextResults);
+      setEditingIndex(null);
+      setDraftAnswer("");
+    } catch (saveError) {
+      setPageError(
+        saveError instanceof Error
+          ? saveError.message
+          : "Failed to save the edited transcript.",
+      );
+    } finally {
+      setIsSavingEdit(false);
+    }
   };
 
   const cancelEdit = () => {
@@ -78,7 +139,7 @@ export function MockTestScript() {
   };
 
   const goResult = () => {
-    if (transitionPhase) {
+    if (transitionPhase || !sessionId) {
       return;
     }
 
@@ -86,28 +147,39 @@ export function MockTestScript() {
       new Promise((resolve) => setTimeout(resolve, ms));
 
     const runTransition = async () => {
-      setTransitionMessage("스크립트를 저장 중입니다...");
-      setTransitionPhase("saving");
-      await transitionDelay(1000);
-      setTransitionPhase("preparing");
-      setTransitionMessage("결과 화면을 준비 중입니다...");
-      await transitionDelay(1000);
-      navigate("/mocktest/result", {
-        state: {
-          questionCount,
-          transcripts: activeTranscripts,
-          difficulty,
-          currentStatus,
-          studentStatus,
-          livingSituation,
-          selectedLeisure,
-          selectedHobbies,
-          selectedExercises,
-          selectedTravel,
-        },
-      });
-      setTransitionPhase(null);
-      setTransitionMessage("");
+      try {
+        setTransitionMessage("Finalizing your mock test result...");
+        setTransitionPhase("saving");
+        await transitionDelay(500);
+        setTransitionPhase("preparing");
+        setTransitionMessage("Preparing the feedback cards...");
+        const sessionResult: EvaluationSession = await completeEvaluationSession(sessionId);
+        await transitionDelay(500);
+        navigate(`/mocktest/result?sessionId=${sessionId}`, {
+          state: {
+            sessionId,
+            sessionResult,
+            questionCount,
+            difficulty,
+            currentStatus,
+            studentStatus,
+            livingSituation,
+            selectedLeisure,
+            selectedHobbies,
+            selectedExercises,
+            selectedTravel,
+          },
+        });
+      } catch (resultError) {
+        setPageError(
+          resultError instanceof Error
+            ? resultError.message
+            : "Failed to prepare the result page.",
+        );
+      } finally {
+        setTransitionPhase(null);
+        setTransitionMessage("");
+      }
     };
 
     void runTransition();
@@ -116,8 +188,8 @@ export function MockTestScript() {
   const goBackToQuestion = () => {
     navigate("/mocktest/question", {
       state: {
-        currentQuestion: Math.max(questionCount - 1, 0),
-        savedTranscripts: activeTranscripts,
+        currentQuestion: Math.max(questionResults.length - 1, 0),
+        questionResults,
         difficulty,
         currentStatus,
         studentStatus,
@@ -126,6 +198,7 @@ export function MockTestScript() {
         selectedHobbies,
         selectedExercises,
         selectedTravel,
+        sessionId,
       },
     });
   };
@@ -137,7 +210,7 @@ export function MockTestScript() {
           <Button variant="ghost" size="icon" onClick={goBackToQuestion}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div className="text-sm font-semibold text-gray-600">답변 스크립트 수정</div>
+          <div className="text-sm font-semibold text-gray-600">Mock Test Script</div>
           <div className="w-10" />
         </div>
 
@@ -146,106 +219,121 @@ export function MockTestScript() {
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
                 <p className="text-sm font-semibold text-yellow-900">Mock Test Script</p>
-                <h1 className="mt-1 text-3xl font-bold text-gray-900">답변 스크립트 수정</h1>
+                <h1 className="mt-1 text-3xl font-bold text-gray-900">Review And Edit</h1>
               </div>
-              <Button onClick={goResult} className="gap-2 bg-yellow-400 text-gray-900 hover:bg-yellow-500">
-                결과 보기
+              <Button
+                onClick={goResult}
+                disabled={!sessionId || isLoading || isSavingEdit}
+                className="gap-2 bg-yellow-400 text-gray-900 hover:bg-yellow-500 disabled:opacity-70"
+              >
+                See Result
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
 
-            <div className="space-y-4">
-              {visibleQuestions.map((question, index) => {
-                const answer = activeTranscripts[index]?.trim() || "";
-                const isEditing = editingIndex === index;
+            {pageError && (
+              <p className="mb-4 text-sm text-red-500">{pageError}</p>
+            )}
 
-                return (
-                  <Card key={question.id} className="border border-gray-200 bg-white p-5">
-                    <div className="mb-4 flex items-start justify-between gap-4">
-                      <h2 className="text-base font-semibold text-gray-900 sm:text-lg">
-                        Q{index + 1}. {question.text}
-                      </h2>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleReplayAnswer(answer)}
-                        disabled={!answer}
-                        className="shrink-0 gap-2"
-                      >
-                        <Volume2 className="h-4 w-4" />
-                        답변 다시 듣기
-                      </Button>
-                    </div>
+            {isLoading ? (
+              <div className="rounded-2xl bg-white p-6 text-sm text-gray-500">
+                Loading saved answers...
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {visibleQuestions.map((question, index) => {
+                  const answer = questionResults[index];
+                  const transcript = answer?.usedTranscript?.trim() || "";
+                  const isEditing = editingIndex === index;
 
-                    <div className="rounded-2xl bg-gray-50 p-4">
-                      <p className="mb-2 text-sm font-medium text-gray-600">내 답변</p>
+                  return (
+                    <Card key={question.id} className="border border-gray-200 bg-white p-5">
+                      <div className="mb-4 flex items-start justify-between gap-4">
+                        <h2 className="text-base font-semibold text-gray-900 sm:text-lg">
+                          Q{index + 1}. {answer?.questionText || question.text}
+                        </h2>
+                        {answer?.audioUrl ? (
+                          <audio controls preload="none" src={answer.audioUrl} className="max-w-[260px]" />
+                        ) : (
+                          <span className="text-xs text-gray-400">No recording</span>
+                        )}
+                      </div>
 
-                      {isEditing ? (
-                        <div className="space-y-3">
-                          <textarea
-                            value={draftAnswer}
-                            onChange={(event) => setDraftAnswer(event.target.value)}
-                            className="min-h-32 w-full rounded-xl border border-gray-200 bg-white p-3 text-sm leading-6 text-gray-800 outline-none focus:border-yellow-400"
-                            placeholder="답변 스크립트를 수정해보세요."
-                          />
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={cancelEdit}
-                              className="gap-2"
-                            >
-                              <X className="h-4 w-4" />
-                              취소
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              onClick={() => saveEdit(index)}
-                              className="gap-2 bg-yellow-400 text-gray-900 hover:bg-yellow-500"
-                            >
-                              <Check className="h-4 w-4" />
-                              저장
-                            </Button>
+                      <div className="rounded-2xl bg-gray-50 p-4">
+                        <p className="mb-2 text-sm font-medium text-gray-600">Transcript</p>
+
+                        {isEditing ? (
+                          <div className="space-y-3">
+                            <textarea
+                              value={draftAnswer}
+                              onChange={(event) => setDraftAnswer(event.target.value)}
+                              className="min-h-32 w-full rounded-xl border border-gray-200 bg-white p-3 text-sm leading-6 text-gray-800 outline-none focus:border-yellow-400"
+                              placeholder="Edit the transcript and save to re-evaluate this answer."
+                            />
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={cancelEdit}
+                                className="gap-2"
+                              >
+                                <X className="h-4 w-4" />
+                                Cancel
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                disabled={isSavingEdit}
+                                onClick={() => void saveEdit(index)}
+                                className="gap-2 bg-yellow-400 text-gray-900 hover:bg-yellow-500"
+                              >
+                                <Check className="h-4 w-4" />
+                                Save And Re-evaluate
+                              </Button>
+                            </div>
                           </div>
-                        </div>
-                      ) : (
-                        <>
-                          <p className="min-h-24 whitespace-pre-wrap text-sm leading-6 text-gray-800">
-                            {answer || "저장된 답변이 없습니다."}
-                          </p>
+                        ) : (
+                          <>
+                            <p className="min-h-24 whitespace-pre-wrap text-sm leading-6 text-gray-800">
+                              {transcript || "No transcript is available for this answer yet."}
+                            </p>
 
-                          <div className="mt-4 flex justify-end">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => startEdit(index)}
-                              className="gap-2"
-                            >
-                              <PencilLine className="h-4 w-4" />
-                              수정하기
-                            </Button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
+                            <div className="mt-4 flex justify-end">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                disabled={!answer}
+                                onClick={() => startEdit(index)}
+                                className="gap-2"
+                              >
+                                <PencilLine className="h-4 w-4" />
+                                Edit Transcript
+                              </Button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
           </Card>
         </motion.div>
 
         <div className="grid gap-4 md:grid-cols-2">
           <Button variant="outline" onClick={() => navigate("/mocktest/setup")} className="gap-2">
             <RotateCcw className="h-4 w-4" />
-            모의고사 다시하기
+            Restart Mock Test
           </Button>
-          <Button onClick={goResult} className="gap-2 bg-yellow-400 text-gray-900 hover:bg-yellow-500">
-            결과 페이지로 이동
+          <Button
+            onClick={goResult}
+            disabled={!sessionId || isLoading || isSavingEdit}
+            className="gap-2 bg-yellow-400 text-gray-900 hover:bg-yellow-500 disabled:opacity-70"
+          >
+            Go To Result
           </Button>
         </div>
       </div>
@@ -263,7 +351,7 @@ export function MockTestScript() {
               </div>
             </div>
             <p className="text-center text-2xl font-bold text-gray-900">{transitionMessage}</p>
-            <p className="mt-3 text-center text-sm text-gray-600">잠시만 기다려주세요.</p>
+            <p className="mt-3 text-center text-sm text-gray-600">Please wait a moment.</p>
           </motion.div>
         </div>
       )}

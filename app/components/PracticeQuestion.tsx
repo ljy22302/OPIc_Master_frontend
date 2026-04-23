@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { motion } from "motion/react";
 import {
@@ -10,6 +10,12 @@ import {
   Volume2,
 } from "lucide-react";
 import { useSpeechToTextRecorder } from "../hooks/useSpeechToTextRecorder";
+import {
+  createEvaluationSession,
+  uploadAnswerEvaluation,
+  type EvaluationAnswer,
+  type EvaluationQuestionPayload,
+} from "../lib/evaluationApi";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import ossCharacter from "./OSS_character.png";
@@ -17,6 +23,16 @@ import { practiceQuestions } from "./practiceQuestions";
 
 type TransitionPhase = "saving" | "preparing" | null;
 type TransitionAction = "next" | "result" | null;
+
+type PracticeQuestionState = {
+  difficultyLabel?: string;
+  selectedType?: string;
+  selectedTypeLabel?: string;
+  selectedTopicLabels?: string[];
+  currentQuestion?: number;
+  questionResults?: EvaluationAnswer[];
+  sessionId?: number;
+};
 
 function PlaceholderImage() {
   return (
@@ -68,20 +84,18 @@ export function PracticeQuestion() {
     selectedTypeLabel = "",
     selectedTopicLabels = [] as string[],
     currentQuestion: initialCurrentQuestion = 0,
-    savedTranscripts: initialSavedTranscripts = [] as string[],
-  } =
-    (location.state as {
-      difficultyLabel?: string;
-      selectedType?: string;
-      selectedTypeLabel?: string;
-      selectedTopicLabels?: string[];
-      currentQuestion?: number;
-      savedTranscripts?: string[];
-    }) ?? {};
+    questionResults: initialQuestionResults = [] as EvaluationAnswer[],
+    sessionId: initialSessionId,
+  } = (location.state as PracticeQuestionState) ?? {};
 
   const questionLimit = selectedType === "random" ? 2 : practiceQuestions.length;
+  const visibleQuestions = useMemo(
+    () => practiceQuestions.slice(0, questionLimit),
+    [questionLimit],
+  );
+
   const [currentQuestion, setCurrentQuestion] = useState(() =>
-    Math.min(initialCurrentQuestion, questionLimit - 1)
+    Math.min(initialCurrentQuestion, Math.max(questionLimit - 1, 0)),
   );
   const [timeLeft, setTimeLeft] = useState(recordingLimit);
   const [showQuestion, setShowQuestion] = useState(false);
@@ -92,23 +106,95 @@ export function PracticeQuestion() {
   const [transitionAction, setTransitionAction] = useState<TransitionAction>(null);
   const [transitionMessage, setTransitionMessage] = useState("");
   const [imageError, setImageError] = useState(false);
-  const [savedTranscripts, setSavedTranscripts] = useState<string[]>(() => {
-    const base = Array(questionLimit).fill("");
-    return base.map((value, index) => initialSavedTranscripts[index] ?? value);
+  const [sessionId, setSessionId] = useState<number | null>(initialSessionId ?? null);
+  const [sessionError, setSessionError] = useState("");
+  const [isPreparingSession, setIsPreparingSession] = useState(false);
+  const [isEvaluating, setIsEvaluating] = useState(false);
+  const [questionResults, setQuestionResults] = useState<EvaluationAnswer[]>(() => {
+    const base = Array.from({ length: questionLimit }, () => null) as Array<EvaluationAnswer | null>;
+    initialQuestionResults.forEach((item, index) => {
+      if (index < base.length) {
+        base[index] = item;
+      }
+    });
+    return base.filter(Boolean) as EvaluationAnswer[];
   });
 
   const {
     error,
     isRecording,
     isUploading,
-    resetTranscript,
+    lastRecording,
+    resetRecording,
     startRecording,
     stopRecording,
-    transcript,
   } = useSpeechToTextRecorder({
-    questionId: `practice-${practiceQuestions[currentQuestion].id}`,
+    questionId: `practice-${visibleQuestions[currentQuestion]?.id ?? currentQuestion + 1}`,
     language: "en",
   });
+
+  useEffect(() => {
+    let isMounted = true;
+
+    if (sessionId || visibleQuestions.length === 0) {
+      return undefined;
+    }
+
+    const payloadQuestions: EvaluationQuestionPayload[] = visibleQuestions.map((question, index) => ({
+      questionId: `practice-${question.id}`,
+      questionOrder: index + 1,
+      questionText: question.text,
+      questionType: selectedType || "practice",
+      translation: question.translation,
+      hint: question.hint,
+      category: selectedTopicLabels[0] || selectedType || "practice",
+    }));
+
+    const run = async () => {
+      try {
+        setIsPreparingSession(true);
+        setSessionError("");
+        const session = await createEvaluationSession({
+          mode: "practice",
+          title: "Practice Session",
+          difficulty: difficultyLabel || undefined,
+          metadata: {
+            difficultyLabel,
+            selectedType,
+            selectedTypeLabel,
+            selectedTopicLabels,
+          },
+          questions: payloadQuestions,
+        });
+
+        if (!isMounted) {
+          return;
+        }
+
+        setSessionId(session.id);
+        setQuestionResults(session.answers);
+      } catch (sessionCreateError) {
+        if (!isMounted) {
+          return;
+        }
+        setSessionError(
+          sessionCreateError instanceof Error
+            ? sessionCreateError.message
+            : "Failed to prepare the practice session.",
+        );
+      } finally {
+        if (isMounted) {
+          setIsPreparingSession(false);
+        }
+      }
+    };
+
+    void run();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [difficultyLabel, selectedTopicLabels, selectedType, selectedTypeLabel, sessionId, visibleQuestions]);
 
   useEffect(() => {
     if (!isRecording) {
@@ -124,12 +210,16 @@ export function PracticeQuestion() {
       return "";
     }
 
-    if (selectedTypeLabel === "肄ㅻ낫??臾몄젣?좏삎" && selectedTopicLabels[0]) {
+    if (selectedType === "topics" && selectedTopicLabels[0]) {
       return `${selectedTypeLabel} - ${selectedTopicLabels[0]}`;
     }
 
     return selectedTypeLabel;
-  }, [selectedTopicLabels, selectedTypeLabel]);
+  }, [selectedTopicLabels, selectedType, selectedTypeLabel]);
+
+  const currentQuestionItem = visibleQuestions[currentQuestion];
+  const currentSavedResult = questionResults[currentQuestion];
+  const isBusy = isUploading || isEvaluating || isPreparingSession;
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -147,22 +237,23 @@ export function PracticeQuestion() {
 
   const recordingProgress = Math.min(
     ((recordingLimit - Math.max(timeLeft, 0)) / recordingLimit) * 100,
-    100
+    100,
   );
   const overtimeProgress = Math.min(
     (Math.abs(Math.min(timeLeft, 0)) / recordingLimit) * 100,
-    100
+    100,
   );
   const isOvertime = timeLeft < 0;
   const canPlayQuestion = playCount < 2;
 
   const handleRecordingToggle = async () => {
-    if (isUploading) {
+    if (isBusy) {
       return;
     }
 
     if (!isRecording) {
       setTimeLeft(recordingLimit);
+      resetRecording();
       await startRecording();
       return;
     }
@@ -171,55 +262,81 @@ export function PracticeQuestion() {
   };
 
   const handleNext = async () => {
-    if (transitionPhase || isUploading) {
+    if (transitionPhase || isBusy || !currentQuestionItem || !sessionId) {
       return;
     }
 
     const nextAction: TransitionAction =
-      currentQuestion < questionLimit - 1 ? "next" : "result";
-    const currentAnswer = isRecording ? await stopRecording() : transcript;
-    const nextSavedTranscripts = [...savedTranscripts];
-    nextSavedTranscripts[currentQuestion] = currentAnswer.trim();
-    setSavedTranscripts(nextSavedTranscripts);
+      currentQuestion < visibleQuestions.length - 1 ? "next" : "result";
 
-    setTransitionAction(nextAction);
-    setTransitionMessage(
-      nextAction === "result" ? "채점 화면으로 이동 중입니다..." : "Saving your answer..."
-    );
-    setTransitionPhase("saving");
+    try {
+      setTransitionAction(nextAction);
+      setTransitionMessage(
+        nextAction === "result"
+          ? "Generating your final practice result..."
+          : "Saving and evaluating your answer..."
+      );
+      setTransitionPhase("saving");
+      setIsEvaluating(true);
 
-    const transitionDelay = (ms: number) =>
-      new Promise((resolve) => setTimeout(resolve, ms));
-
-    await transitionDelay(1000);
-
-    if (nextAction === "next") {
-      setTransitionPhase("preparing");
-      setTransitionMessage("다음 문제로 이동 중입니다...");
-      await transitionDelay(1000);
-      setCurrentQuestion((prev) => prev + 1);
-      setTimeLeft(recordingLimit);
-      setShowQuestion(false);
-      setShowTranslation(false);
-      setShowHint(false);
-      setPlayCount(0);
-      resetTranscript();
-    } else if (nextAction === "result") {
-      navigate("/practice/script", {
-        state: {
-          questionCount: questionLimit,
-          selectedType,
-          transcripts: nextSavedTranscripts,
-          difficultyLabel,
-          selectedTypeLabel,
-          selectedTopicLabels,
-        },
+      const recording = isRecording ? await stopRecording() : lastRecording;
+      const evaluation = await uploadAnswerEvaluation({
+        sessionId,
+        mode: "practice",
+        questionId: `practice-${currentQuestionItem.id}`,
+        questionOrder: currentQuestion + 1,
+        questionText: currentQuestionItem.text,
+        questionType: selectedType || "practice",
+        clientDurationSeconds: recording?.durationSeconds || 0,
+        audioBlob: recording?.audioBlob || null,
+        fileName: recording?.fileName,
+        clientTranscript: recording?.clientTranscript || undefined,
       });
-    }
 
-    setTransitionPhase(null);
-    setTransitionAction(null);
-    setTransitionMessage("");
+      const nextResults = Array.from({ length: visibleQuestions.length }, (_, index) => questionResults[index] || null);
+      nextResults[currentQuestion] = evaluation;
+      setQuestionResults(nextResults.filter(Boolean) as EvaluationAnswer[]);
+
+      const transitionDelay = (ms: number) =>
+        new Promise((resolve) => setTimeout(resolve, ms));
+      await transitionDelay(800);
+
+      if (nextAction === "next") {
+        setTransitionPhase("preparing");
+        setTransitionMessage("Moving to the next question...");
+        await transitionDelay(700);
+        setCurrentQuestion((prev) => prev + 1);
+        setTimeLeft(recordingLimit);
+        setShowQuestion(false);
+        setShowTranslation(false);
+        setShowHint(false);
+        setPlayCount(0);
+        resetRecording();
+      } else {
+        navigate(`/practice/script?sessionId=${sessionId}`, {
+          state: {
+            sessionId,
+            questionCount: visibleQuestions.length,
+            selectedType,
+            difficultyLabel,
+            selectedTypeLabel,
+            selectedTopicLabels,
+            questionResults: nextResults.filter(Boolean),
+          },
+        });
+      }
+    } catch (evaluationError) {
+      setSessionError(
+        evaluationError instanceof Error
+          ? evaluationError.message
+          : "Failed to evaluate the answer.",
+      );
+    } finally {
+      setIsEvaluating(false);
+      setTransitionPhase(null);
+      setTransitionAction(null);
+      setTransitionMessage("");
+    }
   };
 
   return (
@@ -231,7 +348,7 @@ export function PracticeQuestion() {
           </Button>
           <div className="flex items-center gap-4">
             <span className="text-sm font-semibold text-gray-600">
-              Question {currentQuestion + 1} / {questionLimit}
+              Question {currentQuestion + 1} / {visibleQuestions.length || questionLimit}
             </span>
           </div>
         </div>
@@ -307,7 +424,7 @@ export function PracticeQuestion() {
                       className="flex h-full w-full flex-col items-center justify-center gap-3"
                     >
                       <p className="text-center text-base font-medium leading-snug text-gray-900 sm:text-lg sm:leading-relaxed">
-                        {practiceQuestions[currentQuestion].text}
+                        {currentQuestionItem?.text}
                       </p>
 
                       {!showTranslation && (
@@ -319,7 +436,7 @@ export function PracticeQuestion() {
                           className="gap-2 border-yellow-300 bg-white text-yellow-900 hover:bg-yellow-100"
                         >
                           <HelpCircle className="h-4 w-4 shrink-0" />
-                          해석 보기
+                          Show Translation
                         </Button>
                       )}
 
@@ -330,7 +447,7 @@ export function PracticeQuestion() {
                           animate={{ opacity: 1, y: 0 }}
                           className="max-w-[32rem] text-center text-sm font-medium leading-relaxed text-gray-700 sm:text-base"
                         >
-                          {practiceQuestions[currentQuestion].translation}
+                          {currentQuestionItem?.translation}
                         </motion.p>
                       )}
                     </motion.div>
@@ -362,8 +479,8 @@ export function PracticeQuestion() {
                         animate={{ opacity: 1, y: 0 }}
                         className="text-left"
                       >
-                          <p className="text-base font-medium leading-snug text-gray-700 sm:text-lg sm:leading-relaxed">
-                          {practiceQuestions[currentQuestion].hint}
+                        <p className="text-base font-medium leading-snug text-gray-700 sm:text-lg sm:leading-relaxed">
+                          {currentQuestionItem?.hint}
                         </p>
                       </motion.div>
                     ) : (
@@ -384,7 +501,7 @@ export function PracticeQuestion() {
             <Button
               size="lg"
               onClick={handleRecordingToggle}
-              disabled={isUploading}
+              disabled={isBusy || !sessionId}
               className="gap-2 bg-red-500 text-white hover:bg-red-600 disabled:opacity-70"
             >
               {isRecording ? <Square className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
@@ -392,9 +509,15 @@ export function PracticeQuestion() {
             </Button>
           </div>
 
-          {isUploading && (
+          {isPreparingSession && (
             <p className="mb-4 text-center text-sm text-gray-500">
-              Sending your audio to the STT server...
+              Preparing your practice session...
+            </p>
+          )}
+
+          {isEvaluating && (
+            <p className="mb-4 text-center text-sm text-gray-500">
+              Uploading and evaluating your answer...
             </p>
           )}
 
@@ -402,6 +525,18 @@ export function PracticeQuestion() {
             <p className="mb-4 text-center text-sm text-red-500">
               {error}
             </p>
+          )}
+
+          {sessionError && (
+            <p className="mb-4 text-center text-sm text-red-500">
+              {sessionError}
+            </p>
+          )}
+
+          {currentSavedResult?.usedTranscript && (
+            <div className="mb-4 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+              Latest saved transcript: {currentSavedResult.usedTranscript}
+            </div>
           )}
 
           <div className="mb-4 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3">
@@ -428,16 +563,15 @@ export function PracticeQuestion() {
               )}
             </div>
           </div>
-
         </Card>
 
         <div className="grid grid-cols-1 gap-4">
           <Button
             onClick={handleNext}
-            disabled={!!transitionPhase || isUploading}
+            disabled={!!transitionPhase || isBusy || !sessionId}
             className="bg-yellow-400 text-gray-900 hover:bg-yellow-500 disabled:opacity-70"
           >
-            {currentQuestion < questionLimit - 1 ? "Next Question" : "See Result"}
+            {currentQuestion < visibleQuestions.length - 1 ? "Next Question" : "See Result"}
           </Button>
         </div>
 
@@ -466,4 +600,3 @@ export function PracticeQuestion() {
     </div>
   );
 }
-
