@@ -100,7 +100,7 @@ const deletedQuestions: DeletedQuestion[] = [
   },
   {
     id: 6,
-    category: "집",
+    category: "주거",
     level: "5-6",
     question: "Describe your living space in detail.",
     deletedDate: "2026-04-04",
@@ -111,11 +111,11 @@ const deletedQuestions: DeletedQuestion[] = [
 const savedPhrases: SavedPhrase[] = [
   {
     phrase: "Let me introduce myself...",
-    meaning: "제가 자기소개를 시작하겠습니다.",
+    meaning: "제가 먼저 제 소개를 해보겠습니다.",
   },
   {
     phrase: "To be more specific...",
-    meaning: "좀 더 구체적으로 말하자면",
+    meaning: "좀 더 구체적으로 말하면",
   },
   {
     phrase: "In conclusion...",
@@ -123,7 +123,7 @@ const savedPhrases: SavedPhrase[] = [
   },
   {
     phrase: "That's all I wanted to say about...",
-    meaning: "…에 대해 제가 말씀드리고 싶었던 것은 이것이 전부입니다.",
+    meaning: "그 주제에 대해 제가 말하고 싶었던 내용은 여기까지입니다.",
   },
 ];
 
@@ -162,15 +162,14 @@ const topicCategories = [
   "국내 여행",
   "카페",
   "운동",
-  "집",
+  "주거",
   "요리",
   "캠핑",
-  "조깅/걷기",
-  "주거",
+  "걷기/조깅",
+  "이웃",
   "해외여행",
   "휴일",
-  "이웃",
-  "술집",
+  "모임",
   "음악",
   "게임",
   "바다",
@@ -207,26 +206,72 @@ export function SavedQuestions() {
           </Button>
           <div>
             <h1 className="text-3xl font-bold text-gray-900">저장된 자료</h1>
-            <p className="text-gray-600">저장한 문제, 문장, 단어를 한곳에서 다시 확인해보세요.</p>
+            <p className="text-gray-600">저장한 문제, 필수 문장, 단어를 한곳에서 다시 확인하세요.</p>
           </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="saved">저장된 문제 ({savedQuestions.length})</TabsTrigger>
-            <TabsTrigger value="phrases">필수문장 ({savedPhrases.length})</TabsTrigger>
-            <TabsTrigger value="words">저장된 단어 ({savedWordGroups.reduce((sum, group) => sum + group.words.length, 0)})</TabsTrigger>
-            <TabsTrigger value="deleted">휴지통 ({deletedQuestions.length})</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 gap-3 bg-transparent p-0 sm:grid-cols-4">
+            <TabsTrigger
+              value="saved"
+              className="group flex h-20 flex-col items-start justify-between rounded-2xl border border-gray-200 bg-white px-4 py-3 text-left shadow-sm transition data-[state=active]:border-yellow-400 data-[state=active]:bg-yellow-50 data-[state=active]:shadow-md"
+            >
+              <div className="flex w-full items-start justify-between gap-3">
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-yellow-400 text-xs font-bold text-gray-900">
+                  01
+                </span>
+                <FolderOpen className="h-5 w-5 text-gray-400 transition group-data-[state=active]:text-yellow-600" />
+              </div>
+              <span className="text-sm font-semibold text-gray-900">저장된 문제 ({savedQuestions.length})</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="phrases"
+              className="group flex h-20 flex-col items-start justify-between rounded-2xl border border-gray-200 bg-white px-4 py-3 text-left shadow-sm transition data-[state=active]:border-yellow-400 data-[state=active]:bg-yellow-50 data-[state=active]:shadow-md"
+            >
+              <div className="flex w-full items-start justify-between gap-3">
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-gray-900">
+                  02
+                </span>
+                <MessageSquare className="h-5 w-5 text-gray-400 transition group-data-[state=active]:text-yellow-600" />
+              </div>
+              <span className="text-sm font-semibold text-gray-900">필수 문장 ({savedPhrases.length})</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="words"
+              className="group flex h-20 flex-col items-start justify-between rounded-2xl border border-gray-200 bg-white px-4 py-3 text-left shadow-sm transition data-[state=active]:border-yellow-400 data-[state=active]:bg-yellow-50 data-[state=active]:shadow-md"
+            >
+              <div className="flex w-full items-start justify-between gap-3">
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-gray-900">
+                  03
+                </span>
+                <BookOpen className="h-5 w-5 text-gray-400 transition group-data-[state=active]:text-yellow-600" />
+              </div>
+              <span className="text-sm font-semibold text-gray-900">
+                저장된 단어 ({savedWordGroups.reduce((sum, group) => sum + group.words.length, 0)})
+              </span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="deleted"
+              className="group flex h-20 flex-col items-start justify-between rounded-2xl border border-gray-200 bg-white px-4 py-3 text-left shadow-sm transition data-[state=active]:border-yellow-400 data-[state=active]:bg-yellow-50 data-[state=active]:shadow-md"
+            >
+              <div className="flex w-full items-start justify-between gap-3">
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-gray-900">
+                  04
+                </span>
+                <Trash2 className="h-5 w-5 text-gray-400 transition group-data-[state=active]:text-yellow-600" />
+              </div>
+              <span className="text-sm font-semibold text-gray-900">휴지통 ({deletedQuestions.length})</span>
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="saved" className="mt-6">
+          <TabsContent value="saved" className="mt-10 pt-2">
             {savedQuestions.length === 0 ? (
               <Card className="bg-white p-12 text-center">
                 <FolderOpen className="mx-auto mb-4 h-16 w-16 text-gray-300" />
                 <h3 className="mb-2 text-xl font-semibold text-gray-900">저장된 문제가 없습니다</h3>
-                <p className="mb-6 text-gray-600">학습 중에 문제를 저장하면 여기서 다시 볼 수 있습니다.</p>
+                <p className="mb-6 text-gray-600">연습 중에 문제를 저장하면 여기서 다시 볼 수 있습니다.</p>
                 <Button onClick={() => navigate("/practice/setup")} className="bg-yellow-400 text-gray-900 hover:bg-yellow-500">
-                  학습 시작하기
+                  연습 시작하기
                 </Button>
               </Card>
             ) : (
@@ -276,10 +321,10 @@ export function SavedQuestions() {
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                           <div>
                             <h3 className="text-xl font-semibold text-gray-900">{activeTopic}</h3>
-                            <p className="text-sm text-gray-600">선택한 주제에 저장된 문제를 확인하고 다시 풀어보세요.</p>
+                            <p className="text-sm text-gray-600">선택한 주제의 저장된 문제를 확인하고 다시 풀어보세요.</p>
                           </div>
                           <Button size="sm" variant="outline" onClick={() => setActiveTopic(null)}>
-                            선택 초기화
+                            주제 초기화
                           </Button>
                         </div>
                       </Card>
@@ -288,7 +333,7 @@ export function SavedQuestions() {
                         <Card className="border border-gray-200 bg-white p-10 text-center">
                           <FolderOpen className="mx-auto mb-4 h-14 w-14 text-gray-300" />
                           <h4 className="mb-2 text-lg font-semibold text-gray-900">{activeTopic}에 저장된 문제가 없습니다</h4>
-                          <p className="text-sm text-gray-600">다른 주제를 선택하거나 학습 중 문제를 저장해보세요.</p>
+                          <p className="text-sm text-gray-600">다른 주제를 선택하거나 연습 중에 문제를 저장해 보세요.</p>
                         </Card>
                       ) : (
                         <div className="space-y-4">
@@ -325,13 +370,13 @@ export function SavedQuestions() {
                                           className="h-auto px-0 py-0 text-sm font-semibold text-gray-800 hover:bg-transparent hover:text-gray-900"
                                           onClick={() => setOpenAnswers(isOpen ? null : item.id)}
                                         >
-                                          저장 답변 보기
+                                          저장된 답변 보기
                                         </Button>
                                       </div>
 
                                       {isOpen && (
                                         <div className="mt-4 rounded-xl border border-yellow-200 bg-yellow-50 p-4">
-                                          <h4 className="mb-3 text-sm font-semibold text-gray-900">저장 답변</h4>
+                                          <h4 className="mb-3 text-sm font-semibold text-gray-900">저장된 답변</h4>
                                           <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
                                             {item.answers.map((answer, answerIndex) => (
                                               <div
@@ -384,13 +429,13 @@ export function SavedQuestions() {
             )}
           </TabsContent>
 
-          <TabsContent value="phrases" className="mt-6">
+          <TabsContent value="phrases" className="mt-10 pt-2">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
               <Card className="border border-gray-200 bg-gray-50 p-4">
                 <div className="flex items-center gap-3">
                   <MessageSquare className="h-5 w-5 text-yellow-500" />
                   <div>
-                    <h2 className="text-lg font-semibold text-gray-900">필수문장</h2>
+                    <h2 className="text-lg font-semibold text-gray-900">필수 문장</h2>
                     <p className="text-sm text-gray-600">Resources 화면의 카드 구조를 참고해 저장된 필수 표현을 모아두었습니다.</p>
                   </div>
                 </div>
@@ -424,7 +469,7 @@ export function SavedQuestions() {
             </motion.div>
           </TabsContent>
 
-          <TabsContent value="words" className="mt-6">
+          <TabsContent value="words" className="mt-10 pt-2">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
               <Card className="border border-gray-200 bg-gray-50 p-4">
                 <div className="flex items-center gap-3">
@@ -467,17 +512,17 @@ export function SavedQuestions() {
             </motion.div>
           </TabsContent>
 
-          <TabsContent value="deleted" className="mt-6">
+          <TabsContent value="deleted" className="mt-10 pt-2">
             {deletedQuestions.length === 0 ? (
               <Card className="bg-white p-12 text-center">
                 <Trash2 className="mx-auto mb-4 h-16 w-16 text-gray-300" />
                 <h3 className="mb-2 text-xl font-semibold text-gray-900">휴지통이 비어있습니다</h3>
-                <p className="text-gray-600">삭제된 문제는 7일 동안 보관됩니다.</p>
+                <p className="text-gray-600">삭제된 문제는 7일 동안 보관된 뒤 자동으로 삭제됩니다.</p>
               </Card>
             ) : (
               <div className="space-y-4">
                 <Card className="mb-4 border border-yellow-200 bg-yellow-50 p-4">
-                  <p className="text-sm text-gray-700">삭제된 문제는 7일 동안 보관되며 이후 자동으로 삭제됩니다.</p>
+                  <p className="text-sm text-gray-700">삭제된 문제는 7일 동안 보관된 뒤 이후 자동으로 삭제됩니다.</p>
                 </Card>
                 {deletedQuestions.map((item, index) => (
                   <motion.div
