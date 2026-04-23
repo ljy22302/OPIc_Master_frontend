@@ -64,6 +64,10 @@ function FindIdCard() {
         </div>
       </div>
 
+      <p className="mt-4 text-sm text-gray-500">
+        입력한 이메일로 가입된 아이디를 발송합니다.
+      </p>
+
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
       {result && (
         <div className="mt-5 rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
