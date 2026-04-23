@@ -437,7 +437,6 @@ export function Signup() {
                     </SelectContent>
                   </Select>
                 </div>
-                <p className="mt-2 text-xs font-medium text-red-500">*은 필수입니다</p>
               </div>
             </div>
 
