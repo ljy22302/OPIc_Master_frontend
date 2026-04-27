@@ -30,45 +30,6 @@ type PracticeQuestionState = {
   sessionId?: number;
 };
 
-function PlaceholderImage() {
-  return (
-    <svg viewBox="0 0 520 360" className="h-full w-full" role="img" aria-label="吏덈Ц ?쇰윭?ㅽ듃">
-      <defs>
-        <linearGradient id="g1" x1="0" x2="1" y1="0" y2="1">
-          <stop offset="0%" stopColor="#fff8d6" />
-          <stop offset="100%" stopColor="#fff1a8" />
-        </linearGradient>
-        <linearGradient id="g2" x1="0" x2="1" y1="0" y2="1">
-          <stop offset="0%" stopColor="#f8fafc" />
-          <stop offset="100%" stopColor="#e2e8f0" />
-        </linearGradient>
-      </defs>
-      <rect width="520" height="360" rx="28" fill="url(#g1)" />
-      <rect x="120" y="52" width="280" height="220" rx="28" fill="url(#g2)" stroke="#eab308" strokeWidth="4" />
-      <rect x="160" y="88" width="200" height="20" rx="10" fill="#facc15" />
-      <rect x="160" y="124" width="160" height="14" rx="7" fill="#cbd5e1" />
-      <rect x="160" y="152" width="180" height="14" rx="7" fill="#cbd5e1" />
-      <rect x="160" y="180" width="140" height="14" rx="7" fill="#cbd5e1" />
-      <circle cx="260" cy="208" r="34" fill="#fde68a" />
-      <path
-        d="M260 190c-10 0-18 8-18 18v8c0 10 8 18 18 18s18-8 18-18v-8c0-10-8-18-18-18zm-7 18c0-4 3-7 7-7s7 3 7 7v8c0 4-3 7-7 7s-7-3-7-7v-8z"
-        fill="#111827"
-        opacity="0.9"
-      />
-      <rect x="86" y="242" width="348" height="54" rx="18" fill="#fff" stroke="#fde68a" strokeWidth="4" />
-      <path
-        d="M126 268c18-10 34-10 52 0s34 10 52 0 34-10 52 0 34 10 52 0 34-10 52 0"
-        stroke="#fbbf24"
-        strokeWidth="4"
-        fill="none"
-        strokeLinecap="round"
-      />
-      <circle cx="94" cy="64" r="22" fill="#f59e0b" opacity="0.18" />
-      <circle cx="430" cy="86" r="18" fill="#f59e0b" opacity="0.18" />
-    </svg>
-  );
-}
-
 export function PracticeQuestion() {
   const recordingLimit = 120;
   const navigate = useNavigate();
@@ -99,7 +60,6 @@ export function PracticeQuestion() {
   const [playCount, setPlayCount] = useState(0);
   const [transitionPhase, setTransitionPhase] = useState<TransitionPhase>(null);
   const [transitionMessage, setTransitionMessage] = useState("");
-  const [imageError, setImageError] = useState(false);
   const [sessionId, setSessionId] = useState<number | null>(initialSessionId ?? null);
   const [sessionError, setSessionError] = useState("");
   const [isPreparingSession, setIsPreparingSession] = useState(false);
@@ -172,11 +132,7 @@ export function PracticeQuestion() {
         if (!isMounted) {
           return;
         }
-        setSessionError(
-          sessionCreateError instanceof Error
-            ? sessionCreateError.message
-            : "?곗뒿 ?몄뀡 以鍮꾩뿉 ?ㅽ뙣?덉뒿?덈떎.",
-        );
+        setSessionError(sessionCreateError instanceof Error ? sessionCreateError.message : "연습 세션 준비에 실패했습니다.");
       } finally {
         if (isMounted) {
           setIsPreparingSession(false);
@@ -266,8 +222,8 @@ export function PracticeQuestion() {
     try {
       setTransitionMessage(
         nextAction === "result"
-          ? "理쒖쥌 寃곌낵瑜?以鍮꾪븯怨??덉뒿?덈떎..."
-          : "?듬?????ν븯怨??됯??섍퀬 ?덉뒿?덈떎...",
+          ? "최종 결과를 준비하고 있습니다..."
+          : "답변을 저장하고 평가하고 있습니다...",
       );
       setTransitionPhase("saving");
       setIsEvaluating(true);
@@ -294,7 +250,7 @@ export function PracticeQuestion() {
 
       if (nextAction === "next") {
         setTransitionPhase("preparing");
-        setTransitionMessage("?ㅼ쓬 臾몄젣濡??대룞 以묒엯?덈떎...");
+        setTransitionMessage("다음 문제로 이동 중입니다...");
         await transitionDelay(700);
         setCurrentQuestion((prev) => prev + 1);
         setTimeLeft(recordingLimit);
@@ -319,11 +275,7 @@ export function PracticeQuestion() {
         });
       }
     } catch (evaluationError) {
-      setSessionError(
-        evaluationError instanceof Error
-          ? evaluationError.message
-          : "?듬? ?됯????ㅽ뙣?덉뒿?덈떎.",
-      );
+      setSessionError(evaluationError instanceof Error ? evaluationError.message : "답변 평가에 실패했습니다.");
     } finally {
       setIsEvaluating(false);
       setTransitionPhase(null);
@@ -340,7 +292,7 @@ export function PracticeQuestion() {
           </Button>
           <div className="flex items-center gap-4">
             <span className="text-sm font-semibold text-gray-600">
-              吏덈Ц {currentQuestion + 1} / {visibleQuestions.length || questionLimit}
+              질문 {currentQuestion + 1} / {visibleQuestions.length || questionLimit}
             </span>
           </div>
         </div>
@@ -371,20 +323,13 @@ export function PracticeQuestion() {
             <div className="flex flex-col items-center">
               <div className="relative mb-4 flex w-full max-w-[320px] justify-center">
                 <div className="relative z-10 mt-3 inline-flex w-[250px] rounded-[28px] border border-yellow-200 bg-white p-3 shadow-md">
-                  {imageError ? (
-                    <div className="flex h-[214px] w-full items-center justify-center rounded-[22px] bg-white p-4">
-                      <PlaceholderImage />
-                    </div>
-                  ) : (
-                    <div className="flex h-[214px] w-full items-center justify-center overflow-hidden rounded-[22px] bg-white p-2">
-                      <img
-                        src={ossCharacter}
-                        alt="OSS_character"
-                        className="h-full w-full rounded-[18px] object-contain object-center"
-                        onError={() => setImageError(true)}
-                      />
-                    </div>
-                  )}
+                  <div className="flex h-[214px] w-full items-center justify-center overflow-hidden rounded-[22px] bg-white p-2">
+                    <img
+                      src={ossCharacter}
+                      alt="OSS_character"
+                      className="h-full w-full rounded-[18px] object-contain object-center"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -400,9 +345,9 @@ export function PracticeQuestion() {
                 className="mx-auto gap-2 text-gray-700 disabled:opacity-40"
               >
                 <Volume2 className="h-4 w-4" />
-                臾몄젣 ?ｊ린
+                문제 듣기
               </Button>
-              <p className="mt-1 text-center text-xs text-gray-500">理쒕? 2???ъ깮</p>
+              <p className="mt-1 text-center text-xs text-gray-500">최대 2회 재생</p>
             </div>
 
             <div className="flex flex-col justify-start">
@@ -428,7 +373,7 @@ export function PracticeQuestion() {
                           className="gap-2 border-yellow-300 bg-white text-yellow-900 hover:bg-yellow-100"
                         >
                           <HelpCircle className="h-4 w-4 shrink-0" />
-                          ?댁꽍 蹂닿린
+                          해석 보기
                         </Button>
                       )}
 
@@ -453,7 +398,7 @@ export function PracticeQuestion() {
                       className="inline-flex items-center gap-2 text-base font-semibold text-yellow-900 sm:text-2xl"
                     >
                       <HelpCircle className="h-4 w-4 shrink-0" />
-                      臾몄젣 蹂닿린
+                      문제 보기
                     </button>
                   )}
                 </div>
@@ -474,7 +419,7 @@ export function PracticeQuestion() {
                     ) : (
                       <span className="inline-flex items-center gap-2 text-base font-semibold text-sky-900 sm:text-2xl">
                         <Lightbulb className="h-4 w-4 shrink-0" />
-                        ?⑥뼱 ?뚰듃
+                        단어 힌트
                       </span>
                     )}
                   </div>
@@ -493,39 +438,24 @@ export function PracticeQuestion() {
               className="gap-2 bg-red-500 text-white hover:bg-red-600 disabled:opacity-70"
             >
               {isRecording ? <Square className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-              {isRecording ? "?뱀쓬 醫낅즺" : "?뱀쓬 ?쒖옉"}
+              {isRecording ? "녹음 종료" : "녹음 시작"}
             </Button>
           </div>
 
-          {isPreparingSession && (
-            <p className="mb-4 text-center text-sm text-gray-500">
-              ?곗뒿 ?몄뀡 以鍮?以?..
-            </p>
-          )}
-
-          {isEvaluating && (
-            <p className="mb-4 text-center text-sm text-gray-500">
-              ?듬? ?낅줈??諛??됯? 以?..
-            </p>
-          )}
-
-          {error && (
-            <p className="mb-4 text-center text-sm text-red-500">{error}</p>
-          )}
-
-          {sessionError && (
-            <p className="mb-4 text-center text-sm text-red-500">{sessionError}</p>
-          )}
+          {isPreparingSession && <p className="mb-4 text-center text-sm text-gray-500">연습 세션 준비 중...</p>}
+          {isEvaluating && <p className="mb-4 text-center text-sm text-gray-500">답변 업로드 및 평가 중...</p>}
+          {error && <p className="mb-4 text-center text-sm text-red-500">{error}</p>}
+          {sessionError && <p className="mb-4 text-center text-sm text-red-500">{sessionError}</p>}
 
           {currentSavedResult?.usedTranscript && (
             <div className="mb-4 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
-              諛⑷툑 ??λ맂 ?ㅽ겕由쏀듃: {currentSavedResult.usedTranscript}
+              방금 저장한 스크립트: {currentSavedResult.usedTranscript}
             </div>
           )}
 
           <div className="mb-4 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3">
             <div className="mb-2 flex items-center justify-between gap-4 text-sm text-gray-700">
-              <span className="font-medium text-gray-600">?뱀쓬 ?쒓컙</span>
+              <span className="font-medium text-gray-600">녹음 시간</span>
               <span className={`font-semibold ${isOvertime || timeLeft < 30 ? "text-red-500" : "text-gray-900"}`}>
                 {formatRecordingTime(timeLeft)}
               </span>
@@ -551,7 +481,7 @@ export function PracticeQuestion() {
             disabled={!!transitionPhase || isBusy || !sessionId}
             className="bg-yellow-400 text-gray-900 hover:bg-yellow-500 disabled:opacity-70"
           >
-            {currentQuestion < visibleQuestions.length - 1 ? "?ㅼ쓬 臾몄젣" : "寃곌낵 蹂닿린"}
+            {currentQuestion < visibleQuestions.length - 1 ? "다음 문제" : "결과 보기"}
           </Button>
         </div>
 
@@ -568,7 +498,7 @@ export function PracticeQuestion() {
                 </div>
               </div>
               <p className="text-center text-2xl font-bold text-gray-900">{transitionMessage}</p>
-              <p className="mt-3 text-center text-sm text-gray-600">?좎떆留?湲곕떎?ㅼ＜?몄슂.</p>
+              <p className="mt-3 text-center text-sm text-gray-600">잠시만 기다려 주세요.</p>
             </motion.div>
           </div>
         )}

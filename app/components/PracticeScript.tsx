@@ -78,7 +78,7 @@ export function PracticeScript() {
         if (!isMounted) {
           return;
         }
-        setPageError(loadError instanceof Error ? loadError.message : "?곗뒿 ?듬???遺덈윭?ㅼ? 紐삵뻽?듬땲??");
+        setPageError(loadError instanceof Error ? loadError.message : "연습 답변을 불러오지 못했습니다.");
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -115,7 +115,7 @@ export function PracticeScript() {
       setEditingIndex(null);
       setDraftAnswer("");
     } catch (saveError) {
-      setPageError(saveError instanceof Error ? saveError.message : "?섏젙???ㅽ겕由쏀듃瑜???ν븯吏 紐삵뻽?듬땲??");
+      setPageError(saveError instanceof Error ? saveError.message : "수정한 스크립트를 저장하지 못했습니다.");
     } finally {
       setIsSavingEdit(false);
     }
@@ -135,11 +135,11 @@ export function PracticeScript() {
 
     const runTransition = async () => {
       try {
-        setTransitionMessage("?곗뒿 寃곌낵瑜?留덈Т由ы븯怨??덉뒿?덈떎...");
+        setTransitionMessage("연습 결과를 마무리하고 있습니다...");
         setTransitionPhase("saving");
         await transitionDelay(500);
         setTransitionPhase("preparing");
-        setTransitionMessage("?쇰뱶諛??붾㈃??以鍮꾪븯怨??덉뒿?덈떎...");
+        setTransitionMessage("피드백 화면을 준비하고 있습니다...");
         const sessionResult: EvaluationSession = await completeEvaluationSession(sessionId);
         await transitionDelay(500);
         navigate(`/practice/result?sessionId=${sessionId}`, {
@@ -155,7 +155,7 @@ export function PracticeScript() {
           },
         });
       } catch (resultError) {
-        setPageError(resultError instanceof Error ? resultError.message : "寃곌낵 ?붾㈃??以鍮꾪븯吏 紐삵뻽?듬땲??");
+        setPageError(resultError instanceof Error ? resultError.message : "결과 화면을 준비하지 못했습니다.");
       } finally {
         setTransitionPhase(null);
         setTransitionMessage("");
@@ -182,17 +182,18 @@ export function PracticeScript() {
     });
   };
 
-  const questionCards = visibleQuestions.length > 0
-    ? visibleQuestions.map((question, index) => ({
-        key: question.id,
-        text: question.text,
-        index,
-      }))
-    : questionResults.map((answer, index) => ({
-        key: answer.questionId,
-        text: answer.questionText,
-        index,
-      }));
+  const questionCards =
+    visibleQuestions.length > 0
+      ? visibleQuestions.map((question, index) => ({
+          key: question.id,
+          text: question.text,
+          index,
+        }))
+      : questionResults.map((answer, index) => ({
+          key: answer.questionId,
+          text: answer.questionText,
+          index,
+        }));
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -201,7 +202,7 @@ export function PracticeScript() {
           <Button variant="ghost" size="icon" onClick={goBackToQuestion}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div className="text-sm font-semibold text-gray-600">?듬? ?ㅽ겕由쏀듃</div>
+          <div className="text-sm font-semibold text-gray-600">답변 스크립트</div>
           <div className="w-10" />
         </div>
 
@@ -209,15 +210,15 @@ export function PracticeScript() {
           <Card className="border-2 border-yellow-200 bg-yellow-50 p-6 shadow-sm">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
-                <p className="text-sm font-semibold text-yellow-900">?듬? ?ㅽ겕由쏀듃</p>
-                <h1 className="mt-1 text-3xl font-bold text-gray-900">寃??諛??섏젙</h1>
+                <p className="text-sm font-semibold text-yellow-900">답변 스크립트</p>
+                <h1 className="mt-1 text-3xl font-bold text-gray-900">검토 및 수정</h1>
               </div>
               <Button
                 onClick={goResult}
                 disabled={!sessionId || isLoading || isSavingEdit}
                 className="gap-2 bg-yellow-400 text-gray-900 hover:bg-yellow-500 disabled:opacity-70"
               >
-                寃곌낵 蹂닿린
+                결과 보기
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
@@ -225,9 +226,7 @@ export function PracticeScript() {
             {pageError && <p className="mb-4 text-sm text-red-500">{pageError}</p>}
 
             {isLoading ? (
-              <div className="rounded-2xl bg-white p-6 text-sm text-gray-500">
-                ??λ맂 ?듬???遺덈윭?ㅻ뒗 以?..
-              </div>
+              <div className="rounded-2xl bg-white p-6 text-sm text-gray-500">저장한 답변을 불러오는 중...</div>
             ) : (
               <div className="space-y-4">
                 {questionCards.map(({ key, text, index }) => {
@@ -244,12 +243,12 @@ export function PracticeScript() {
                         {answer?.audioUrl ? (
                           <audio controls preload="none" src={answer.audioUrl} className="max-w-[260px]" />
                         ) : (
-                          <span className="text-xs text-gray-400">?뱀쓬 ?뚯씪 ?놁쓬</span>
+                          <span className="text-xs text-gray-400">녹음 파일 없음</span>
                         )}
                       </div>
 
                       <div className="rounded-2xl bg-gray-50 p-4">
-                        <p className="mb-2 text-sm font-medium text-gray-600">?ㅽ겕由쏀듃</p>
+                        <p className="mb-2 text-sm font-medium text-gray-600">스크립트</p>
 
                         {isEditing ? (
                           <div className="space-y-3">
@@ -257,12 +256,12 @@ export function PracticeScript() {
                               value={draftAnswer}
                               onChange={(event) => setDraftAnswer(event.target.value)}
                               className="min-h-32 w-full rounded-xl border border-gray-200 bg-white p-3 text-sm leading-6 text-gray-800 outline-none focus:border-yellow-400"
-                              placeholder="?ㅽ겕由쏀듃瑜??섏젙??????ν븯硫????듬?留??ㅼ떆 ?됯??⑸땲??"
+                              placeholder="스크립트를 수정한 뒤 저장하면 답변이 다시 평가됩니다."
                             />
                             <div className="flex justify-end gap-2">
                               <Button type="button" variant="ghost" size="sm" onClick={cancelEdit} className="gap-2">
                                 <X className="h-4 w-4" />
-                                痍⑥냼
+                                취소
                               </Button>
                               <Button
                                 type="button"
@@ -272,14 +271,14 @@ export function PracticeScript() {
                                 className="gap-2 bg-yellow-400 text-gray-900 hover:bg-yellow-500"
                               >
                                 <Check className="h-4 w-4" />
-                                ??????ы룊媛
+                                저장 후 재평가
                               </Button>
                             </div>
                           </div>
                         ) : (
                           <>
                             <p className="min-h-24 whitespace-pre-wrap text-sm leading-6 text-gray-800">
-                              {transcript || "?꾩쭅 ??λ맂 ?ㅽ겕由쏀듃媛 ?놁뒿?덈떎."}
+                              {transcript || "아직 저장한 스크립트가 없습니다."}
                             </p>
 
                             <div className="mt-4 flex justify-end">
@@ -292,7 +291,7 @@ export function PracticeScript() {
                                 className="gap-2"
                               >
                                 <PencilLine className="h-4 w-4" />
-                                ?ㅽ겕由쏀듃 ?섏젙
+                                스크립트 수정
                               </Button>
                             </div>
                           </>
@@ -309,14 +308,14 @@ export function PracticeScript() {
         <div className="grid gap-4 md:grid-cols-2">
           <Button variant="outline" onClick={() => navigate("/practice/setup")} className="gap-2">
             <RotateCcw className="h-4 w-4" />
-            泥섏쓬遺???ㅼ떆 ?섍린
+            처음부터 다시 하기
           </Button>
           <Button
             onClick={goResult}
             disabled={!sessionId || isLoading || isSavingEdit}
             className="gap-2 bg-yellow-400 text-gray-900 hover:bg-yellow-500 disabled:opacity-70"
           >
-            寃곌낵 ?붾㈃?쇰줈 ?대룞
+            결과 화면으로 이동
           </Button>
         </div>
       </div>
@@ -334,7 +333,7 @@ export function PracticeScript() {
               </div>
             </div>
             <p className="text-center text-2xl font-bold text-gray-900">{transitionMessage}</p>
-            <p className="mt-3 text-center text-sm text-gray-600">?좎떆留?湲곕떎?ㅼ＜?몄슂.</p>
+            <p className="mt-3 text-center text-sm text-gray-600">잠시만 기다려 주세요.</p>
           </motion.div>
         </div>
       )}

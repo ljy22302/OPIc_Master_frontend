@@ -12,33 +12,33 @@ const difficulties = [
 ];
 
 const types = [
-  { value: "topics", label: "二쇱젣?좏깮遺꾩빞" },
-  { value: "roleplaying", label: "濡ㅽ뵆?덉엵" },
-  { value: "random", label: "?뚮컻臾몄젣" },
+  { value: "topics", label: "주제 선택 분야" },
+  { value: "roleplaying", label: "롤플레잉" },
+  { value: "random", label: "돌발 문제" },
 ];
 
 const topics = [
-  { id: "performance", label: "怨듭뿰" },
-  { id: "domestic_travel", label: "援?궡?ы뻾" },
-  { id: "cafe", label: "移댄럹" },
-  { id: "exercise", label: "?대룞" },
-  { id: "home", label: "吏? " },
-  { id: "cooking", label: "?붾━" },
-  { id: "camping", label: "罹좏븨" },
-  { id: "jogging_walking", label: "議곌퉭/?곗콉" },
-  { id: "housing", label: "?щ뒗 吏?? " },
-  { id: "abroad", label: "?댁쇅?ы뻾" },
-  { id: "holiday", label: "?댁씪" },
-  { id: "neighbor", label: "?댁썐" },
-  { id: "drinking_bar", label: "?좎쭛" },
-  { id: "music", label: "?뚯븙" },
-  { id: "game", label: "寃뚯엫" },
-  { id: "beach", label: "?대?" },
-  { id: "park", label: "怨듭썝" },
-  { id: "mountain", label: "?? " },
-  { id: "shopping", label: "?쇳븨" },
-  { id: "movie", label: "?곹솕" },
-  { id: "job", label: "援ъ쭅" },
+  { id: "performance", label: "공연" },
+  { id: "domestic_travel", label: "국내 여행" },
+  { id: "cafe", label: "카페" },
+  { id: "exercise", label: "운동" },
+  { id: "home", label: "집" },
+  { id: "cooking", label: "요리" },
+  { id: "camping", label: "캠핑" },
+  { id: "jogging_walking", label: "조깅/산책" },
+  { id: "housing", label: "주거" },
+  { id: "abroad", label: "해외여행" },
+  { id: "holiday", label: "휴일/연휴" },
+  { id: "neighbor", label: "이웃" },
+  { id: "drinking_bar", label: "술집/회식" },
+  { id: "music", label: "음악" },
+  { id: "game", label: "게임" },
+  { id: "beach", label: "바다" },
+  { id: "park", label: "공원" },
+  { id: "mountain", label: "산" },
+  { id: "shopping", label: "쇼핑" },
+  { id: "movie", label: "영화" },
+  { id: "job", label: "직장" },
   { id: "SNS", label: "SNS" },
 ];
 
@@ -113,44 +113,32 @@ export function PracticeSetup() {
   };
 
   return (
-    <div className="min-h-screen p-6 bg-gray-50">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="mx-auto max-w-4xl">
         <div className="mb-8 flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate("/main")}
-          >
-            <ArrowLeft className="w-5 h-5" />
+          <Button variant="ghost" size="icon" onClick={() => navigate("/main")}>
+            <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">?곗뒿 紐⑤뱶 ?ㅼ젙</h1>
-            <p className="text-gray-600">?쒖씠?꾩? 二쇱젣瑜??좏깮?섏꽭??/p>
+            <h1 className="text-3xl font-bold text-gray-900">연습 모드 설정</h1>
+            <p className="text-gray-600">난이도와 문제 유형을 선택해 주세요.</p>
           </div>
         </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            1. ?쒖씠???좏깮
-          </h2>
-          <div className="grid md:grid-cols-2 gap-4">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+          <h2 className="mb-4 text-xl font-semibold text-gray-900">1. 난이도 선택</h2>
+          <div className="grid gap-4 md:grid-cols-2">
             {difficulties.map((diff) => (
               <Card
                 key={diff.value}
-                className={`p-6 cursor-pointer transition-all duration-300 bg-white ${
+                className={`cursor-pointer bg-white p-6 transition-all duration-300 ${
                   difficulty === diff.value
                     ? "border-2 border-yellow-400 shadow-lg"
                     : "border-2 border-transparent hover:border-gray-300"
                 }`}
                 onClick={() => setDifficulty(diff.value)}
               >
-                <h3 className="text-xl font-bold text-gray-900 mb-1">
-                  {diff.label}
-                </h3>
+                <h3 className="mb-1 text-xl font-bold text-gray-900">{diff.label}</h3>
                 <p className="text-gray-600">{diff.description}</p>
               </Card>
             ))}
@@ -163,23 +151,19 @@ export function PracticeSetup() {
           transition={{ delay: 0.05 }}
           className="mb-8"
         >
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            2. ?좏삎 ?좏깮
-          </h2>
-          <div className="grid md:grid-cols-3 gap-4">
+          <h2 className="mb-4 text-xl font-semibold text-gray-900">2. 유형 선택</h2>
+          <div className="grid gap-4 md:grid-cols-3">
             {types.map((type) => (
               <Card
                 key={type.value}
-                className={`p-6 cursor-pointer transition-all duration-300 bg-white ${
+                className={`cursor-pointer bg-white p-6 transition-all duration-300 ${
                   selectedType === type.value
                     ? "border-2 border-yellow-400 shadow-lg"
                     : "border-2 border-transparent hover:border-gray-300"
                 }`}
                 onClick={() => toggleType(type.value)}
               >
-                <h3 className="text-xl font-bold text-gray-900">
-                  {type.label}
-                </h3>
+                <h3 className="text-xl font-bold text-gray-900">{type.label}</h3>
               </Card>
             ))}
           </div>
@@ -192,26 +176,22 @@ export function PracticeSetup() {
             transition={{ delay: 0.1 }}
             className="mb-8"
           >
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
-              3. 二쇱젣 ?좏깮
-            </h2>
-            <div className={`grid grid-cols-2 md:grid-cols-3 gap-y-4 gap-x-2 md:gap-x-3 ${selectedType !== "topics" ? "opacity-50" : ""}`}>
+            <h2 className="mb-4 text-xl font-semibold text-gray-900">3. 주제 선택</h2>
+            <div className="grid grid-cols-2 gap-x-2 gap-y-4 md:grid-cols-3 md:gap-x-3">
               {topics.map((topic) => {
                 const isSelected = selectedTopic === topic.id;
                 return (
                   <Card
                     key={topic.id}
-                    className={`p-6 transition-all duration-300 bg-white ${
+                    className={`bg-white p-6 transition-all duration-300 ${
                       isSelected
                         ? "border-2 border-yellow-400 shadow-lg"
                         : "border-2 border-transparent hover:border-gray-300"
-                    } ${selectedType !== "topics" ? "cursor-not-allowed" : "cursor-pointer"}`}
+                    } cursor-pointer`}
                     onClick={() => toggleTopic(topic.id)}
                   >
                     <div className="flex items-center justify-center">
-                      <span className="text-base font-semibold text-gray-900">
-                        {topic.label}
-                      </span>
+                      <span className="text-base font-semibold text-gray-900">{topic.label}</span>
                     </div>
                   </Card>
                 );
@@ -220,40 +200,25 @@ export function PracticeSetup() {
           </motion.div>
         )}
 
-        {!selectedType && (
-          <p className="text-sm text-gray-500 mb-4">
-            癒쇱? ?곗뒿 ?좏삎???좏깮?댁＜?몄슂.
-          </p>
-        )}
+        {!selectedType && <p className="mb-4 text-sm text-gray-500">먼저 연습 유형을 선택해 주세요.</p>}
         {selectedType === "topics" && !selectedTopic && (
-          <p className="text-sm text-gray-500 mb-4">
-            二쇱젣?좏깮遺꾩빞 ?좏삎???좏깮?섎㈃ ?꾨옒?먯꽌 二쇱젣瑜?怨⑤씪二쇱꽭??
-          </p>
+          <p className="mb-4 text-sm text-gray-500">주제 선택 분야를 고르면 아래에서 주제를 하나 선택해 주세요.</p>
         )}
-        {submitError && (
-          <p className="text-sm text-red-500 mb-4">
-            {submitError}
-          </p>
-        )}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-        >
+        {submitError && <p className="mb-4 text-sm text-red-500">{submitError}</p>}
+
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
           <Button
             size="lg"
-            className="w-full bg-yellow-400 hover:bg-yellow-500 text-gray-900"
+            className="w-full bg-yellow-400 text-gray-900 hover:bg-yellow-500"
             onClick={() => void handleStart()}
             disabled={!canStart || isSubmitting}
           >
-            {isSubmitting ? "문제 불러오는 중..." : "?곗뒿 ?쒖옉?섍린"}
-            <ArrowRight className="w-5 h-5 ml-2" />
+            {isSubmitting ? "문제 불러오는 중..." : "연습 시작하기"}
+            <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
           {!canStart && (
-            <p className="text-center text-sm text-gray-500 mt-3">
-              {selectedType === "topics"
-                ? "?쒖씠?꾩? 二쇱젣瑜??좏깮?댁＜?몄슂"
-                : "?쒖씠?꾩? ?좏삎???좏깮?댁＜?몄슂"}
+            <p className="mt-3 text-center text-sm text-gray-500">
+              {selectedType === "topics" ? "난이도와 주제를 선택해 주세요" : "난이도와 유형을 선택해 주세요"}
             </p>
           )}
         </motion.div>
