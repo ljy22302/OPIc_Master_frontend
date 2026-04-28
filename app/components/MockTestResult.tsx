@@ -20,7 +20,7 @@ export function MockTestResult() {
       sessionId={sessionId}
       initialSessionResult={sessionResult}
       title="모의고사 완료"
-      subtitle="저장된 실제 평가 결과를 기반으로 문항별 피드백을 확인해보세요."
+      subtitle="문항별 답변 스크립트와 평가 결과를 확인해보세요."
       restartPath="/mocktest/setup"
       onNavigate={(path) => navigate(path)}
     />
