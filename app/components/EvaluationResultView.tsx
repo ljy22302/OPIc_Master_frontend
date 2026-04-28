@@ -305,30 +305,18 @@ export function EvaluationResultView({
                       </div>
                     )}
 
-                    <div className="mb-4 grid gap-4 lg:grid-cols-3">
-                      <div className="rounded-lg bg-gray-50 p-4">
-                        <p className="mb-2 text-sm font-semibold text-gray-700">원본 스크립트</p>
-                        <p className="text-sm leading-6 text-gray-800">
-                          {answer.originalTranscript || "원본 스크립트 없음"}
-                        </p>
-                      </div>
-                      <div className="rounded-lg bg-gray-50 p-4">
-                        <p className="mb-2 text-sm font-semibold text-gray-700">수정한 스크립트</p>
-                        <p className="text-sm leading-6 text-gray-800">
-                          {answer.editedTranscript || "수정한 스크립트 없음"}
-                        </p>
-                      </div>
-                      <div className="rounded-lg bg-yellow-50 p-4">
-                        <p className="mb-2 text-sm font-semibold text-gray-700">평가에 사용된 스크립트</p>
+                    <div className="mb-4 rounded-lg bg-yellow-50 p-4">
+                        <p className="mb-2 text-sm font-semibold text-gray-700">스크립트</p>
                         <div className="relative">
                           <p className={`text-sm leading-6 text-gray-800 ${expandedAnswers.includes(index) ? "" : "max-h-28 overflow-hidden"}`}>
-                            {answer.usedTranscript || "평가에 사용된 스크립트 없음"}
+                            {answer.usedTranscript || "스크립트 없음"}
                           </p>
                           {!expandedAnswers.includes(index) && answer.usedTranscript && (
                             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-yellow-50 to-transparent" />
                           )}
                         </div>
-                        <div className="mt-3 flex justify-end">
+                        <p className="mt-3 text-right text-xs text-gray-500">* 평가에 사용되었습니다</p>
+                        <div className="mt-2 flex justify-end">
                           <Button type="button" variant="ghost" size="sm" onClick={() => toggleAnswer(index)} className="gap-1 text-gray-600 hover:text-gray-900">
                             {expandedAnswers.includes(index) ? (
                               <>
@@ -343,7 +331,6 @@ export function EvaluationResultView({
                             )}
                           </Button>
                         </div>
-                      </div>
                     </div>
 
                     <div className="mb-4 grid gap-4 lg:grid-cols-2">
