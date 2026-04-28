@@ -47,6 +47,60 @@ function MetricItem({ label, value }: { label: string; value: string }) {
   );
 }
 
+function BarMetricItem({
+  label,
+  value,
+  max,
+  suffix = "",
+}: {
+  label: string;
+  value: number;
+  max: number;
+  suffix?: string;
+}) {
+  const safeValue = Number.isFinite(value) ? value : 0;
+  const safeMax = Math.max(max, 1);
+  const percentage = Math.max(0, Math.min((safeValue / safeMax) * 100, 100));
+  const displayValue = Number.isInteger(safeValue) ? safeValue.toString() : safeValue.toFixed(1);
+
+  return (
+    <div className="grid min-h-12 grid-cols-[7.5rem_1fr_4.5rem] items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3">
+      <p className="text-sm font-semibold text-gray-700">{label}</p>
+      <div className="h-2.5 overflow-hidden rounded-full bg-gray-100">
+        <div className="h-full rounded-full bg-yellow-400 transition-all" style={{ width: `${percentage}%` }} />
+      </div>
+      <p className="text-right text-sm font-semibold text-gray-900">
+        {displayValue}{suffix}
+      </p>
+    </div>
+  );
+}
+
+function SectionToggle({ isOpen, onClick }: { isOpen: boolean; onClick: () => void }) {
+  return (
+    <div className="mb-4 flex justify-center">
+      <Button
+        type="button"
+        size="sm"
+        onClick={onClick}
+        className="min-w-32 gap-1 rounded-full bg-yellow-400 px-5 font-semibold text-gray-900 shadow-sm hover:bg-yellow-500"
+      >
+        {isOpen ? (
+          <>
+            <ChevronUp className="h-4 w-4" />
+            접기
+          </>
+        ) : (
+          <>
+            <ChevronDown className="h-4 w-4" />
+            더보기
+          </>
+        )}
+      </Button>
+    </div>
+  );
+}
+
 export function EvaluationResultView({
   sessionId,
   initialSessionResult,
@@ -58,6 +112,7 @@ export function EvaluationResultView({
 }: EvaluationResultViewProps) {
   const [sessionResult, setSessionResult] = useState<EvaluationSession | null>(initialSessionResult || null);
   const [expandedAnswers, setExpandedAnswers] = useState<number[]>([]);
+  const [expandedResultDetails, setExpandedResultDetails] = useState<number[]>([]);
   const [savedAnswerIds, setSavedAnswerIds] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(!initialSessionResult);
   const [pageError, setPageError] = useState("");
@@ -100,6 +155,12 @@ export function EvaluationResultView({
   const toggleAnswer = (index: number) => {
     setExpandedAnswers((current) =>
       current.includes(index) ? current.filter((item) => item !== index) : [...current, index],
+    );
+  };
+
+  const toggleResultDetails = (answerId: number) => {
+    setExpandedResultDetails((current) =>
+      current.includes(answerId) ? current.filter((item) => item !== answerId) : [...current, answerId],
     );
   };
 
@@ -285,17 +346,6 @@ export function EvaluationResultView({
                       </div>
                     </div>
 
-                    <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                      <MetricItem label="단어 수" value={`${answer.metrics.wordCount}`} />
-                      <MetricItem label="문장 수" value={`${answer.metrics.sentenceCount}`} />
-                      <MetricItem label="평균 문장 길이" value={`${answer.metrics.avgSentenceLength}`} />
-                      <MetricItem label="말하기 속도" value={`${answer.metrics.speechRateWpm} wpm`} />
-                      <MetricItem label="질문 키워드 일치도" value={`${Math.round(answer.metrics.keywordSimilarity * 100)}%`} />
-                      <MetricItem label="어휘 다양성" value={`${Math.round(answer.metrics.lexicalDiversity * 100)}%`} />
-                      <MetricItem label="침묵 비율" value={`${Math.round(answer.metrics.silenceRatio * 100)}%`} />
-                      <MetricItem label="STT 신뢰도" value={`${Math.round((answer.transcriptConfidence || 0) * 100)}%`} />
-                    </div>
-
                     <div className="mb-4 grid gap-4 lg:grid-cols-2">
                       <div className="rounded-lg bg-green-50 p-4">
                         <p className="mb-2 text-sm font-semibold text-gray-700">강점</p>
@@ -315,38 +365,58 @@ export function EvaluationResultView({
                       </div>
                     </div>
 
-                    <div className="mb-4 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                      <MetricItem label="문법" value={`${answer.feedback.scores.grammar}`} />
-                      <MetricItem label="유창성" value={`${answer.feedback.scores.fluency}`} />
-                      <MetricItem label="어휘" value={`${answer.feedback.scores.vocabulary}`} />
-                      <MetricItem label="답변 완성도" value={`${answer.feedback.scores.completion}`} />
-                      <MetricItem label="질문 적합도" value={`${answer.feedback.scores.relevance}`} />
-                      <MetricItem label="호응 유도" value={`${answer.feedback.scores.engagement}`} />
-                    </div>
+                    <SectionToggle
+                      isOpen={expandedResultDetails.includes(answer.id)}
+                      onClick={() => toggleResultDetails(answer.id)}
+                    />
 
-                    <div className="space-y-3 rounded-lg bg-yellow-50 p-4">
-                      <p className="text-sm font-semibold text-gray-700">상세 코칭</p>
-                      <div className="grid gap-3 md:grid-cols-2">
-                        <MetricItem label="문법" value={answer.feedback.feedback.grammar} />
-                        <MetricItem label="유창성" value={answer.feedback.feedback.fluency} />
-                        <MetricItem label="어휘" value={answer.feedback.feedback.vocabulary} />
-                        <MetricItem label="답변 완성도" value={answer.feedback.feedback.completion} />
-                        <MetricItem label="질문 적합도" value={answer.feedback.feedback.relevance} />
-                        <MetricItem label="속도" value={answer.feedback.feedback.speed} />
-                        <MetricItem label="문장 길이" value={answer.feedback.sentenceLength} />
-                        <MetricItem label="답변 시간" value={answer.feedback.answerTime} />
-                        <MetricItem label="반복 표현" value={answer.feedback.repetitionRate} />
-                        <MetricItem label="키워드 유사도" value={answer.feedback.keywordSimilarity} />
+                    {expandedResultDetails.includes(answer.id) && (
+                      <div className="space-y-4">
+                        <div className="grid gap-3 lg:grid-cols-2">
+                          <BarMetricItem label="단어 수" value={answer.metrics.wordCount} max={150} suffix="개" />
+                          <BarMetricItem label="문장 수" value={answer.metrics.sentenceCount} max={20} suffix="개" />
+                          <BarMetricItem label="평균 문장 길이" value={answer.metrics.avgSentenceLength} max={25} suffix="단어" />
+                          <BarMetricItem label="말하기 속도" value={answer.metrics.speechRateWpm} max={180} suffix=" wpm" />
+                          <BarMetricItem label="질문 키워드 일치도" value={Math.round(answer.metrics.keywordSimilarity * 100)} max={100} suffix="%" />
+                          <BarMetricItem label="어휘 다양성" value={Math.round(answer.metrics.lexicalDiversity * 100)} max={100} suffix="%" />
+                          <BarMetricItem label="침묵 비율" value={Math.round(answer.metrics.silenceRatio * 100)} max={100} suffix="%" />
+                          <BarMetricItem label="STT 신뢰도" value={Math.round((answer.transcriptConfidence || 0) * 100)} max={100} suffix="%" />
+                        </div>
+
+                        <div className="grid gap-3 lg:grid-cols-2">
+                          <BarMetricItem label="문법" value={answer.feedback.scores.grammar} max={100} suffix="점" />
+                          <BarMetricItem label="유창성" value={answer.feedback.scores.fluency} max={100} suffix="점" />
+                          <BarMetricItem label="어휘" value={answer.feedback.scores.vocabulary} max={100} suffix="점" />
+                          <BarMetricItem label="답변 완성도" value={answer.feedback.scores.completion} max={100} suffix="점" />
+                          <BarMetricItem label="질문 적합도" value={answer.feedback.scores.relevance} max={100} suffix="점" />
+                          <BarMetricItem label="호응 유도" value={answer.feedback.scores.engagement} max={100} suffix="점" />
+                        </div>
+
+                        <div className="space-y-3 rounded-lg bg-yellow-50 p-4">
+                          <p className="text-sm font-semibold text-gray-700">상세 코칭</p>
+                          <div className="grid gap-3 md:grid-cols-2">
+                            <MetricItem label="문법" value={answer.feedback.feedback.grammar} />
+                            <MetricItem label="유창성" value={answer.feedback.feedback.fluency} />
+                            <MetricItem label="어휘" value={answer.feedback.feedback.vocabulary} />
+                            <MetricItem label="답변 완성도" value={answer.feedback.feedback.completion} />
+                            <MetricItem label="질문 적합도" value={answer.feedback.feedback.relevance} />
+                            <MetricItem label="속도" value={answer.feedback.feedback.speed} />
+                            <MetricItem label="문장 길이" value={answer.feedback.sentenceLength} />
+                            <MetricItem label="답변 시간" value={answer.feedback.answerTime} />
+                            <MetricItem label="반복 표현" value={answer.feedback.repetitionRate} />
+                            <MetricItem label="키워드 유사도" value={answer.feedback.keywordSimilarity} />
+                          </div>
+                          <div className="rounded-xl border border-yellow-100 bg-white p-4">
+                            <p className="mb-2 text-sm font-semibold text-gray-700">개선 팁</p>
+                            <ul className="space-y-2 text-sm text-gray-800">
+                              {answer.feedback.tips.map((tip, tipIndex) => (
+                                <li key={tipIndex}>- {tip}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
                       </div>
-                      <div className="rounded-xl border border-yellow-100 bg-white p-4">
-                        <p className="mb-2 text-sm font-semibold text-gray-700">개선 팁</p>
-                        <ul className="space-y-2 text-sm text-gray-800">
-                          {answer.feedback.tips.map((tip, tipIndex) => (
-                            <li key={tipIndex}>- {tip}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
+                    )}
                   </Card>
                 ))}
               </div>
