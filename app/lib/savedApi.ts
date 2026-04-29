@@ -55,6 +55,8 @@ export type SavedQuestionItem = {
   hint?: string | null;
   translation?: string | null;
   savedDate: string;
+  deletedDate?: string | null;
+  daysLeft?: number | null;
   deleted: boolean;
 };
 

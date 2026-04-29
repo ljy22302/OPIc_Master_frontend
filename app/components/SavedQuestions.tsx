@@ -133,6 +133,17 @@ function toSavedQuestion(item: SavedQuestionItem): SavedQuestion {
   };
 }
 
+function toDeletedQuestion(item: SavedQuestionItem): DeletedQuestion {
+  return {
+    id: item.id,
+    category: normalizeCategory(item.category),
+    level: modeLabel(item.level || ""),
+    question: item.question,
+    deletedDate: item.deletedDate || item.savedDate,
+    daysLeft: item.daysLeft ?? 0,
+  };
+}
+
 function buildRetryQuestion(item: SavedQuestion) {
   return {
     id: `saved-${item.id}`,
@@ -183,14 +194,7 @@ export function SavedQuestions() {
       setDeletedQuestions(
         response.items
           .filter((item) => item.deleted)
-          .map((item) => ({
-            id: item.id,
-            category: normalizeCategory(item.category),
-            level: modeLabel(item.level || ""),
-            question: item.question,
-            deletedDate: item.savedDate,
-            daysLeft: 0,
-          })),
+          .map(toDeletedQuestion),
       );
       setPageError("");
     } catch (error) {
@@ -241,14 +245,7 @@ export function SavedQuestions() {
       setDeletedQuestions(
         response.items
           .filter((item) => item.deleted)
-          .map((item) => ({
-            id: item.id,
-            category: normalizeCategory(item.category),
-            level: modeLabel(item.level || ""),
-            question: item.question,
-            deletedDate: item.savedDate,
-            daysLeft: 0,
-          })),
+          .map(toDeletedQuestion),
       );
       setOpenAnswers(null);
       setPageError("");
@@ -264,14 +261,7 @@ export function SavedQuestions() {
       setDeletedQuestions(
         response.items
           .filter((item) => item.deleted)
-          .map((item) => ({
-            id: item.id,
-            category: normalizeCategory(item.category),
-            level: modeLabel(item.level || ""),
-            question: item.question,
-            deletedDate: item.savedDate,
-            daysLeft: 0,
-          })),
+          .map(toDeletedQuestion),
       );
       setPageError("");
     } catch (error) {
