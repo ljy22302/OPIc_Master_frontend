@@ -452,17 +452,17 @@ export function PracticeQuestion() {
                         key={`hint-${currentQuestion}`}
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="grid w-full grid-cols-1 gap-2 text-left sm:grid-cols-2 lg:grid-cols-3"
+                        className="grid w-full grid-cols-2 gap-1.5 text-left sm:gap-2"
                       >
                         {hintWords.map((item) => (
                           <div
                             key={`${item.word}-${item.meaning}`}
-                            className="rounded-md border border-sky-100 bg-white px-3 py-2 shadow-sm"
+                            className="flex items-center justify-between gap-1.5 rounded-md border border-sky-100 bg-white/70 px-2 py-1.5 shadow-sm sm:gap-3 sm:px-3 sm:py-2"
                           >
-                            <span className="block whitespace-nowrap text-xs font-semibold text-gray-900 sm:text-sm">
+                            <span className="min-w-0 truncate text-[10px] font-semibold text-gray-900 sm:text-xs">
                               {item.word}
                             </span>
-                            <span className="mt-1 block break-keep text-xs font-medium leading-snug text-gray-600 sm:text-sm">
+                            <span className="shrink-0 break-keep text-[10px] font-medium leading-snug text-gray-600 sm:text-xs">
                               {item.meaning}
                             </span>
                           </div>
