@@ -521,16 +521,6 @@ export function SavedQuestions() {
 
           <TabsContent value="phrases" className="mt-10 pt-2">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-              <Card className="border border-gray-200 bg-gray-50 p-4">
-                <div className="flex items-center gap-3">
-                  <MessageSquare className="h-5 w-5 text-yellow-500" />
-                  <div>
-                    <h2 className="text-lg font-semibold text-gray-900">필수 문장</h2>
-                    <p className="text-sm text-gray-600">Resources 화면의 카드 구조를 참고해 저장된 필수 표현을 모아두었습니다.</p>
-                  </div>
-                </div>
-              </Card>
-
               <div className="grid gap-4">
                 {savedPhrases.length === 0 ? (
                   <Card className="bg-white p-10 text-center">
@@ -567,16 +557,6 @@ export function SavedQuestions() {
 
           <TabsContent value="words" className="mt-10 pt-2">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-              <Card className="border border-gray-200 bg-gray-50 p-4">
-                <div className="flex items-center gap-3">
-                  <BookOpen className="h-5 w-5 text-yellow-500" />
-                  <div>
-                    <h2 className="text-lg font-semibold text-gray-900">저장된 단어</h2>
-                    <p className="text-sm text-gray-600">단어 아래에 뜻이 바로 보이도록 Resources의 어휘 카드 구조를 참고했습니다.</p>
-                  </div>
-                </div>
-              </Card>
-
               <div className="space-y-6">
                 {savedWordGroups.length === 0 ? (
                   <Card className="bg-white p-10 text-center">
