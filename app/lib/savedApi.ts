@@ -52,6 +52,8 @@ export type SavedQuestionItem = {
   answer: string;
   category: string | null;
   level: string | null;
+  hint?: string | null;
+  translation?: string | null;
   savedDate: string;
   deleted: boolean;
 };
