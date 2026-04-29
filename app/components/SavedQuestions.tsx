@@ -169,6 +169,14 @@ function groupSavedWords(words: Array<{ topic: string; word: string; meaning: st
   }, []);
 }
 
+function writeStoredItems<T>(key: string, items: T[]) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(key, JSON.stringify(items));
+}
+
 export function SavedQuestions() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("saved");
@@ -282,6 +290,21 @@ export function SavedQuestions() {
     });
   };
 
+  const handleRemoveSavedPhrase = (phrase: string) => {
+    setSavedPhrases((current) => {
+      const nextItems = current.filter((item) => item.phrase !== phrase);
+      writeStoredItems(savedPhrasesStorageKey, nextItems);
+      return nextItems;
+    });
+  };
+
+  const handleRemoveSavedWord = (word: string) => {
+    const storedWords = readStoredItems<{ topic: string; word: string; meaning: string }>(savedWordsStorageKey);
+    const nextWords = storedWords.filter((item) => item.word !== word);
+    writeStoredItems(savedWordsStorageKey, nextWords);
+    setSavedWordGroups(groupSavedWords(nextWords));
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="mx-auto max-w-5xl">
@@ -291,7 +314,7 @@ export function SavedQuestions() {
           </Button>
           <div>
             <h1 className="text-3xl font-bold text-gray-900">저장된 자료</h1>
-            <p className="text-gray-600">저장한 문제, 필수 문장, 단어를 한곳에서 다시 확인하세요.</p>
+            <p className="text-gray-600">저장한 문제, 저장된 필수 문장, 단어를 한곳에서 다시 확인하세요.</p>
           </div>
         </div>
 
@@ -325,7 +348,7 @@ export function SavedQuestions() {
                 </span>
                 <MessageSquare className="h-5 w-5 text-gray-400 transition group-data-[state=active]:text-yellow-600" />
               </div>
-              <span className="text-[11px] font-semibold leading-tight text-gray-900 sm:text-sm">필수 문장 ({savedPhrases.length})</span>
+              <span className="text-[11px] font-semibold leading-tight text-gray-900 sm:text-sm">저장된 필수 문장 ({savedPhrases.length})</span>
             </TabsTrigger>
             <TabsTrigger
               value="words"
@@ -351,7 +374,7 @@ export function SavedQuestions() {
                 </span>
                 <Trash2 className="h-5 w-5 text-gray-400 transition group-data-[state=active]:text-yellow-600" />
               </div>
-              <span className="text-[11px] font-semibold leading-tight text-gray-900 sm:text-sm">휴지통 ({deletedQuestions.length})</span>
+              <span className="text-[11px] font-semibold leading-tight text-gray-900 sm:text-sm">문제 휴지통 ({deletedQuestions.length})</span>
             </TabsTrigger>
           </TabsList>
 
@@ -546,7 +569,16 @@ export function SavedQuestions() {
                           </Button>
                           {isOpen && <p className="mt-2 text-sm text-gray-600">{item.meaning}</p>}
                         </div>
-                        <Bookmark className="mt-1 h-4 w-4 text-yellow-600" fill="currentColor" />
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 shrink-0 rounded-full text-yellow-600 hover:bg-yellow-100 hover:text-yellow-700"
+                          onClick={() => handleRemoveSavedPhrase(item.phrase)}
+                          aria-label="저장 해제"
+                        >
+                          <Bookmark className="h-4 w-4" fill="currentColor" />
+                        </Button>
                       </div>
                     </Card>
                   );
@@ -584,7 +616,16 @@ export function SavedQuestions() {
                             <p className="text-sm font-semibold text-gray-900">{item.word}</p>
                             <p className="mt-1 text-sm text-gray-600">{item.meaning}</p>
                           </div>
-                          <Bookmark className="h-4 w-4 text-yellow-600" fill="currentColor" />
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 shrink-0 rounded-full text-yellow-600 hover:bg-yellow-100 hover:text-yellow-700"
+                            onClick={() => handleRemoveSavedWord(item.word)}
+                            aria-label="저장 해제"
+                          >
+                            <Bookmark className="h-4 w-4" fill="currentColor" />
+                          </Button>
                         </div>
                       ))}
                     </div>
@@ -598,7 +639,7 @@ export function SavedQuestions() {
             {deletedQuestions.length === 0 ? (
               <Card className="bg-white p-12 text-center">
                 <Trash2 className="mx-auto mb-4 h-16 w-16 text-gray-300" />
-                <h3 className="mb-2 text-xl font-semibold text-gray-900">휴지통이 비어있습니다</h3>
+                <h3 className="mb-2 text-xl font-semibold text-gray-900">문제 휴지통이 비어있습니다</h3>
                 <p className="text-gray-600">삭제된 문제는 7일 동안 보관된 뒤 자동으로 삭제됩니다.</p>
               </Card>
             ) : (
