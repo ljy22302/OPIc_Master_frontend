@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { motion } from "motion/react";
 import { ArrowLeft, Mic, Square, Volume2 } from "lucide-react";
+import { useQuestionSpeech } from "../hooks/useQuestionSpeech";
 import { useSpeechToTextRecorder } from "../hooks/useSpeechToTextRecorder";
 import {
   createEvaluationSession,
@@ -65,6 +66,7 @@ export function MockTestQuestion() {
   const [sessionError, setSessionError] = useState("");
   const [isPreparingSession, setIsPreparingSession] = useState(false);
   const [isEvaluating, setIsEvaluating] = useState(false);
+  const [questionSpeechError, setQuestionSpeechError] = useState("");
   const [questionResults, setQuestionResults] = useState<EvaluationAnswer[]>(initialQuestionResults);
 
   const {
@@ -79,6 +81,7 @@ export function MockTestQuestion() {
     questionId: `mock-test-${mockTestQuestions[currentQuestion].id}`,
     language: "en",
   });
+  const { isSpeaking, isSupported: isQuestionSpeechSupported, speak, stop } = useQuestionSpeech();
 
   useEffect(() => {
     let isMounted = true;
@@ -166,6 +169,11 @@ export function MockTestQuestion() {
   }, [isRecording, recordingTime]);
 
   useEffect(() => {
+    setQuestionSpeechError("");
+    stop();
+  }, [currentQuestion, stop]);
+
+  useEffect(() => {
     if (totalTime > 0) {
       const timer = setTimeout(() => setTotalTime((prev) => prev - 1), 1000);
       return () => clearTimeout(timer);
@@ -227,6 +235,26 @@ export function MockTestQuestion() {
     "Role Play": "롤플레이",
     "Follow-up": "돌발 질문",
   }[currentQ.type] || currentQ.type;
+
+  const handlePlayQuestion = () => {
+    if (playCount >= 2 || !currentQ.text) {
+      return;
+    }
+
+    if (!isQuestionSpeechSupported) {
+      setQuestionSpeechError("이 브라우저에서는 문제 듣기 기능을 지원하지 않습니다.");
+      return;
+    }
+
+    const didSpeak = speak(currentQ.text);
+    if (!didSpeak) {
+      setQuestionSpeechError("문제를 음성으로 읽지 못했습니다.");
+      return;
+    }
+
+    setQuestionSpeechError("");
+    setPlayCount((prev) => prev + 1);
+  };
 
   const handleRecordingToggle = async () => {
     if (isBusy) {
@@ -431,17 +459,20 @@ export function MockTestQuestion() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => {
-                    if (playCount < 2) {
-                      setPlayCount((prev) => prev + 1);
-                    }
-                  }}
+                  onClick={handlePlayQuestion}
                   disabled={playCount >= 2}
-                  className="gap-2 text-gray-700 disabled:opacity-40"
+                  className={`gap-2 transition-all disabled:opacity-40 ${
+                    isSpeaking
+                      ? "border-yellow-500 bg-yellow-400 text-gray-900 shadow-md hover:bg-yellow-400"
+                      : "text-gray-700"
+                  }`}
                 >
-                  <Volume2 className="h-4 w-4" />
+                  <Volume2 className={`h-4 w-4 ${isSpeaking ? "animate-pulse" : ""}`} />
                   문제 듣기
                 </Button>
+                {isSpeaking && (
+                  <p className="mt-1 text-center text-xs font-medium text-yellow-700">지금 문제를 읽고 있어요</p>
+                )}
                 <p className="mt-1 text-center text-xs text-gray-500">최대 2회 재생</p>
               </div>
 
@@ -559,6 +590,7 @@ export function MockTestQuestion() {
 
           {error && <p className="mb-4 text-center text-sm text-red-500">{error}</p>}
           {sessionError && <p className="mb-4 text-center text-sm text-red-500">{sessionError}</p>}
+          {questionSpeechError && <p className="mb-4 text-center text-sm text-red-500">{questionSpeechError}</p>}
 
           {currentSavedResult?.usedTranscript && (
             <div className="mb-4 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
