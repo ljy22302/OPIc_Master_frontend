@@ -1,10 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "motion/react";
-import { ArrowLeft, ArrowUp, Bookmark, BookOpen, MessageSquare } from "lucide-react";
+import { ArrowLeft, ArrowUp, Bookmark, BookOpen, ChevronRight, MessageSquare } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import {
+  topicVocabulary as hintTopicVocabulary,
+  vocabularyMeanings as hintVocabularyMeanings,
+} from "./topicVocabularyData";
 
 type PhraseItem = {
   phrase: string;
@@ -349,6 +354,7 @@ export function Resources() {
   const [expandedMeanings, setExpandedMeanings] = useState<string[]>([]);
   const [savedWords, setSavedWords] = useState<SavedWordRecord[]>(() => readStoredItems<SavedWordRecord>(savedWordsStorageKey));
   const [expandedTip, setExpandedTip] = useState<number | null>(null);
+  const [selectedVocabularyTopic, setSelectedVocabularyTopic] = useState<string | null>(null);
 
   useEffect(() => {
     window.localStorage.setItem(savedPhrasesStorageKey, JSON.stringify(savedPhrases));
@@ -381,6 +387,8 @@ export function Resources() {
         : [...prev, { topic, word, meaning }],
     );
   };
+
+  const selectedVocabulary = hintTopicVocabulary.find((topic) => topic.topic === selectedVocabularyTopic);
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -486,47 +494,39 @@ export function Resources() {
 
           <TabsContent value="vocabulary" className="mt-10 pt-2">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-              {topicVocabulary.map((topic) => (
-                <Card key={topic.topic} className="bg-white p-6">
-                  <div className="mb-4 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <BookOpen className="h-5 w-5 text-yellow-500" />
-                      <h3 className="text-xl font-bold text-gray-900">{topic.topic}</h3>
-                    </div>
-                    <span className="text-sm text-gray-500">
-                      {topic.words.filter((word) => savedWords.some((item) => item.word === word)).length}개 저장됨
-                    </span>
+              <Card className="bg-white p-5">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="h-5 w-5 text-yellow-500" />
+                    <h3 className="text-xl font-bold text-gray-900">주제 선택</h3>
                   </div>
+                  <span className="text-sm text-gray-500">{hintTopicVocabulary.length}개 주제</span>
+                </div>
 
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {topic.words.map((word) => {
-                      const isSaved = savedWords.some((item) => item.word === word);
-                      const meaning = vocabularyMeanings[word] ?? "";
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {hintTopicVocabulary.map((topic) => {
+                    const savedCount = topic.words.filter((word) => savedWords.some((item) => item.word === word)).length;
 
-                      return (
-                        <div
-                          key={word}
-                          className="flex items-start justify-between gap-3 rounded-lg border border-yellow-100 bg-yellow-50 p-3"
-                        >
-                          <div className="min-w-0">
-                            <p className="text-sm font-semibold text-gray-900">{word}</p>
-                            {meaning && <p className="mt-1 text-sm text-gray-600">{meaning}</p>}
-                          </div>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className={`h-9 w-9 rounded-full p-0 ${isSaved ? "text-yellow-600" : "text-gray-700"}`}
-                            onClick={() => toggleSavedWord(topic.topic, word, meaning)}
-                            aria-label={isSaved ? "저장됨" : "저장하기"}
-                          >
-                            <Bookmark className="h-4 w-4" fill={isSaved ? "currentColor" : "none"} />
-                          </Button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </Card>
-              ))}
+                    return (
+                      <Button
+                        key={topic.topic}
+                        type="button"
+                        variant="outline"
+                        className="h-auto justify-between rounded-lg border border-gray-200 bg-white p-4 text-left text-gray-800 hover:border-yellow-300 hover:bg-yellow-50"
+                        onClick={() => setSelectedVocabularyTopic(topic.topic)}
+                      >
+                        <span className="min-w-0">
+                          <span className="block font-semibold">{topic.topic}</span>
+                          <span className="mt-1 block text-xs text-gray-500">
+                            {topic.words.length}개 단어 · {savedCount}개 저장
+                          </span>
+                        </span>
+                        <ChevronRight className="h-4 w-4 shrink-0 text-gray-400" />
+                      </Button>
+                    );
+                  })}
+                </div>
+              </Card>
             </motion.div>
           </TabsContent>
 
@@ -574,6 +574,57 @@ export function Resources() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <Dialog open={Boolean(selectedVocabulary)} onOpenChange={(open) => !open && setSelectedVocabularyTopic(null)}>
+        <DialogContent className="max-h-[88vh] max-w-4xl gap-0 overflow-hidden border-2 border-yellow-200 bg-white p-0">
+          {selectedVocabulary && (
+            <>
+              <DialogHeader className="border-b border-gray-100 px-6 py-5 text-left">
+                <DialogTitle className="text-2xl font-bold text-gray-900">{selectedVocabulary.topic}</DialogTitle>
+                <DialogDescription className="text-gray-600">
+                  토픽 hint에 있는 핵심 단어 {selectedVocabulary.words.length}개
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="max-h-[68vh] overflow-y-auto px-6 py-5">
+                <div className="mb-4 flex justify-end">
+                  <span className="text-sm text-gray-500">
+                    {selectedVocabulary.words.filter((word) => savedWords.some((item) => item.word === word)).length}개 저장됨
+                  </span>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {selectedVocabulary.words.map((word) => {
+                    const isSaved = savedWords.some((item) => item.word === word);
+                    const meaning = hintVocabularyMeanings[word] ?? "";
+
+                    return (
+                      <div
+                        key={word}
+                        className="flex items-start justify-between gap-3 rounded-lg border border-yellow-100 bg-yellow-50 p-3"
+                      >
+                        <div className="min-w-0">
+                          <p className="break-words text-sm font-semibold text-gray-900">{word}</p>
+                          {meaning && <p className="mt-1 text-sm text-gray-600">{meaning}</p>}
+                        </div>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className={`h-9 w-9 shrink-0 rounded-full p-0 ${isSaved ? "text-yellow-600" : "text-gray-700"}`}
+                          onClick={() => toggleSavedWord(selectedVocabulary.topic, word, meaning)}
+                          aria-label={isSaved ? "저장됨" : "저장하기"}
+                        >
+                          <Bookmark className="h-4 w-4" fill={isSaved ? "currentColor" : "none"} />
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <button
         type="button"
