@@ -351,8 +351,8 @@ export function PracticeQuestion() {
             </div>
 
             <div className="flex flex-col justify-start">
-              <div className="mb-4 grid h-[210px] gap-3 sm:h-[300px] sm:grid-rows-[3fr_2fr] sm:gap-3">
-                <div className="flex h-full w-full items-center justify-center rounded-md border border-yellow-100 bg-yellow-50 px-2 py-3 text-center shadow-md transition hover:bg-yellow-100 hover:shadow-lg sm:rounded-xl sm:px-4 sm:py-0">
+              <div className="mb-4 grid gap-3 sm:gap-3">
+                <div className="flex min-h-[150px] w-full items-center justify-center rounded-md border border-yellow-100 bg-yellow-50 px-2 py-3 text-center shadow-md transition hover:bg-yellow-100 hover:shadow-lg sm:min-h-[180px] sm:rounded-xl sm:px-4">
                   {showQuestion ? (
                     <motion.div
                       key={`question-${currentQuestion}`}
@@ -403,16 +403,16 @@ export function PracticeQuestion() {
                   )}
                 </div>
 
-                <button type="button" onClick={() => setShowHint((prev) => !prev)} className="h-full w-full">
-                  <div className="flex h-full w-full items-center justify-center rounded-md border border-sky-100 bg-sky-50 px-2 py-3 text-center shadow-md transition hover:bg-sky-100 hover:shadow-lg sm:rounded-xl sm:px-4 sm:py-0">
+                <button type="button" onClick={() => setShowHint((prev) => !prev)} className="w-full">
+                  <div className="flex min-h-[92px] w-full items-center justify-center rounded-md border border-sky-100 bg-sky-50 px-3 py-4 text-center shadow-md transition hover:bg-sky-100 hover:shadow-lg sm:min-h-[110px] sm:rounded-xl sm:px-4">
                     {showHint ? (
                       <motion.div
                         key={`hint-${currentQuestion}`}
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="text-left"
+                        className="w-full text-left"
                       >
-                        <p className="text-base font-medium leading-snug text-gray-700 sm:text-lg sm:leading-relaxed">
+                        <p className="whitespace-pre-wrap break-words text-sm font-medium leading-relaxed text-gray-700 sm:text-base">
                           {currentQuestionItem?.hint}
                         </p>
                       </motion.div>

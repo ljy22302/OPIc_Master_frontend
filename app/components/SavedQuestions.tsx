@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "motion/react";
 import {
@@ -14,12 +14,15 @@ import {
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import { deleteSavedQuestion, getSavedQuestions, restoreSavedQuestion, type SavedQuestionItem } from "../lib/savedApi";
 
 type SavedQuestion = {
   id: number;
   category: string;
   level: string;
   question: string;
+  hint: string;
+  translation: string;
   savedDate: string;
   attempts: number;
   answers: string[];
@@ -37,6 +40,7 @@ type DeletedQuestion = {
 type SavedPhrase = {
   phrase: string;
   meaning: string;
+  topic?: string;
 };
 
 type SavedWordGroup = {
@@ -44,118 +48,22 @@ type SavedWordGroup = {
   words: Array<{ word: string; meaning: string }>;
 };
 
-const savedQuestions: SavedQuestion[] = [
-  {
-    id: 1,
-    category: "카페",
-    level: "5-6",
-    question: "Tell me about your favorite cafe and why you like it.",
-    savedDate: "2026-04-08",
-    attempts: 2,
-    answers: [
-      "My favorite cafe is a small place near my home because it has a calm atmosphere.",
-      "I usually go there on weekends to relax and have a latte.",
-    ],
-  },
-  {
-    id: 2,
-    category: "국내 여행",
-    level: "5-6",
-    question: "Describe a memorable travel experience from your past.",
-    savedDate: "2026-04-07",
-    attempts: 1,
-    answers: ["I once visited Busan with my family, and the beach view was amazing."],
-  },
-  {
-    id: 3,
-    category: "운동",
-    level: "3-4",
-    question: "What kind of exercise do you enjoy and how often do you do it?",
-    savedDate: "2026-04-06",
-    attempts: 3,
-    answers: [
-      "I enjoy jogging because it helps me clear my mind.",
-      "I usually exercise three times a week after work.",
-    ],
-  },
-  {
-    id: 4,
-    category: "요리",
-    level: "5-6",
-    question: "Tell me about a dish you like to cook at home.",
-    savedDate: "2026-04-05",
-    attempts: 1,
-    answers: ["I like to cook pasta at home because it is easy and tastes great."],
-  },
-];
+const savedPhrasesStorageKey = "opicSavedPhrases";
+const savedWordsStorageKey = "opicSavedWords";
 
-const deletedQuestions: DeletedQuestion[] = [
-  {
-    id: 5,
-    category: "음악",
-    level: "3-4",
-    question: "What kind of music do you listen to?",
-    deletedDate: "2026-04-09",
-    daysLeft: 5,
-  },
-  {
-    id: 6,
-    category: "주거",
-    level: "5-6",
-    question: "Describe your living space in detail.",
-    deletedDate: "2026-04-04",
-    daysLeft: 1,
-  },
-];
+function readStoredItems<T>(key: string): T[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
 
-const savedPhrases: SavedPhrase[] = [
-  {
-    phrase: "Let me introduce myself...",
-    meaning: "제가 먼저 제 소개를 해보겠습니다.",
-  },
-  {
-    phrase: "To be more specific...",
-    meaning: "좀 더 구체적으로 말하면",
-  },
-  {
-    phrase: "In conclusion...",
-    meaning: "결론적으로",
-  },
-  {
-    phrase: "That's all I wanted to say about...",
-    meaning: "그 주제에 대해 제가 말하고 싶었던 내용은 여기까지입니다.",
-  },
-];
-
-const savedWordGroups: SavedWordGroup[] = [
-  {
-    topic: "카페",
-    words: [
-      { word: "atmosphere", meaning: "분위기" },
-      { word: "cozy", meaning: "아늑한" },
-      { word: "espresso", meaning: "에스프레소" },
-      { word: "pastry", meaning: "페이스트리" },
-    ],
-  },
-  {
-    topic: "운동",
-    words: [
-      { word: "workout routine", meaning: "운동 루틴" },
-      { word: "cardio", meaning: "유산소 운동" },
-      { word: "strength training", meaning: "근력 운동" },
-      { word: "endurance", meaning: "지구력" },
-    ],
-  },
-  {
-    topic: "국내 여행",
-    words: [
-      { word: "road trip", meaning: "자동차 여행" },
-      { word: "itinerary", meaning: "여행 일정" },
-      { word: "accommodation", meaning: "숙소" },
-      { word: "scenic", meaning: "경치 좋은" },
-    ],
-  },
-];
+  try {
+    const rawValue = window.localStorage.getItem(key);
+    const parsed = rawValue ? JSON.parse(rawValue) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
 
 const topicCategories = [
   "공연",
@@ -181,21 +89,198 @@ const topicCategories = [
   "SNS",
 ];
 
+const topicGroupLabel = "주제 선택 문제";
+const primaryCategories = [topicGroupLabel, "돌발 문제", "롤플레잉"];
+
+const categoryDisplayMap: Record<string, string> = {
+  국내여행: "국내 여행",
+  조깅산책: "걷기/조깅",
+  해변: "바다",
+  사는지역: "주거",
+  구직: "직장",
+  돌발문제: "돌발 문제",
+};
+
+function normalizeCategory(category?: string | null) {
+  if (!category) {
+    return "기타";
+  }
+
+  return categoryDisplayMap[category] || category;
+}
+
+function modeLabel(value: string) {
+  if (value === "mock_test") {
+    return "모의고사 모드";
+  }
+  if (value === "practice") {
+    return "연습 모드";
+  }
+  return value || "저장됨";
+}
+
+function toSavedQuestion(item: SavedQuestionItem): SavedQuestion {
+  return {
+    id: item.id,
+    category: normalizeCategory(item.category),
+    level: modeLabel(item.level || ""),
+    question: item.question,
+    hint: item.hint || "",
+    translation: item.translation || "",
+    savedDate: item.savedDate,
+    attempts: 0,
+    answers: item.answer ? [item.answer] : [],
+  };
+}
+
+function toDeletedQuestion(item: SavedQuestionItem): DeletedQuestion {
+  return {
+    id: item.id,
+    category: normalizeCategory(item.category),
+    level: modeLabel(item.level || ""),
+    question: item.question,
+    deletedDate: item.deletedDate || item.savedDate,
+    daysLeft: item.daysLeft ?? 0,
+  };
+}
+
+function buildRetryQuestion(item: SavedQuestion) {
+  return {
+    id: `saved-${item.id}`,
+    category: item.category,
+    text: item.question,
+    translation: item.translation,
+    hint: item.hint,
+  };
+}
+
+function groupSavedWords(words: Array<{ topic: string; word: string; meaning: string }>): SavedWordGroup[] {
+  return words.reduce<SavedWordGroup[]>((groups, wordItem) => {
+    const topic = wordItem.topic || "기타";
+    const group = groups.find((current) => current.topic === topic);
+
+    if (group) {
+      group.words.push({ word: wordItem.word, meaning: wordItem.meaning });
+    } else {
+      groups.push({ topic, words: [{ word: wordItem.word, meaning: wordItem.meaning }] });
+    }
+
+    return groups;
+  }, []);
+}
+
 export function SavedQuestions() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("saved");
-  const [activeTopic, setActiveTopic] = useState<string | null>("카페");
+  const [activeGroup, setActiveGroup] = useState<string | null>(null);
+  const [activeTopic, setActiveTopic] = useState<string | null>(null);
   const [expandedPhrase, setExpandedPhrase] = useState<string | null>(null);
   const [openAnswers, setOpenAnswers] = useState<number | null>(null);
+  const [savedQuestions, setSavedQuestions] = useState<SavedQuestion[]>([]);
+  const [deletedQuestions, setDeletedQuestions] = useState<DeletedQuestion[]>([]);
+  const [savedPhrases, setSavedPhrases] = useState<SavedPhrase[]>([]);
+  const [savedWordGroups, setSavedWordGroups] = useState<SavedWordGroup[]>([]);
+  const [pageError, setPageError] = useState("");
+
+  const savedWordCount = useMemo(
+    () => savedWordGroups.reduce((sum, group) => sum + group.words.length, 0),
+    [savedWordGroups],
+  );
+
+  const loadSavedQuestions = async () => {
+    try {
+      const response = await getSavedQuestions();
+      setSavedQuestions(response.items.filter((item) => !item.deleted).map(toSavedQuestion));
+      setDeletedQuestions(
+        response.items
+          .filter((item) => item.deleted)
+          .map(toDeletedQuestion),
+      );
+      setPageError("");
+    } catch (error) {
+      setSavedQuestions([]);
+      setDeletedQuestions([]);
+      setPageError(error instanceof Error ? error.message : "저장된 문제를 불러오지 못했습니다.");
+    }
+  };
+
+  useEffect(() => {
+    void loadSavedQuestions();
+    setSavedPhrases(readStoredItems<SavedPhrase>(savedPhrasesStorageKey));
+    setSavedWordGroups(groupSavedWords(readStoredItems<{ topic: string; word: string; meaning: string }>(savedWordsStorageKey)));
+  }, []);
 
   const filteredQuestions = activeTopic
     ? savedQuestions.filter((item) => item.category === activeTopic)
     : [];
 
-  const topicCounts = topicCategories.reduce<Record<string, number>>((acc, topic) => {
+  const savedTopicCategories = useMemo(
+    () =>
+      Array.from(
+        new Set([
+          ...topicCategories,
+          ...savedQuestions.map((item) => item.category).filter((category) => !primaryCategories.includes(category)),
+        ]),
+      ),
+    [savedQuestions],
+  );
+
+  const topicCounts = savedTopicCategories.reduce<Record<string, number>>((acc, topic) => {
     acc[topic] = savedQuestions.filter((item) => item.category === topic).length;
     return acc;
   }, {});
+
+  const primaryCounts = {
+    [topicGroupLabel]: savedTopicCategories.reduce((sum, topic) => sum + (topicCounts[topic] ?? 0), 0),
+    "돌발 문제": savedQuestions.filter((item) => item.category === "돌발 문제").length,
+    "롤플레잉": savedQuestions.filter((item) => item.category === "롤플레잉").length,
+  };
+
+  const visibleTopicCategories = savedTopicCategories.filter((topic) => (topicCounts[topic] ?? 0) > 0);
+
+  const handleDeleteQuestion = async (savedId: number) => {
+    try {
+      const response = await deleteSavedQuestion(savedId);
+      setSavedQuestions(response.items.filter((item) => !item.deleted).map(toSavedQuestion));
+      setDeletedQuestions(
+        response.items
+          .filter((item) => item.deleted)
+          .map(toDeletedQuestion),
+      );
+      setOpenAnswers(null);
+      setPageError("");
+    } catch (error) {
+      setPageError(error instanceof Error ? error.message : "문제를 삭제하지 못했습니다.");
+    }
+  };
+
+  const handleRestoreQuestion = async (savedId: number) => {
+    try {
+      const response = await restoreSavedQuestion(savedId);
+      setSavedQuestions(response.items.filter((item) => !item.deleted).map(toSavedQuestion));
+      setDeletedQuestions(
+        response.items
+          .filter((item) => item.deleted)
+          .map(toDeletedQuestion),
+      );
+      setPageError("");
+    } catch (error) {
+      setPageError(error instanceof Error ? error.message : "문제를 복원하지 못했습니다.");
+    }
+  };
+
+  const handleRetryQuestion = (item: SavedQuestion) => {
+    navigate("/practice/question", {
+      state: {
+        difficultyLabel: item.level,
+        selectedType: "saved",
+        selectedTypeLabel: "저장된 문제",
+        selectedTopics: [],
+        selectedTopicLabels: [item.category],
+        questions: [buildRetryQuestion(item)],
+      },
+    });
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -210,95 +295,85 @@ export function SavedQuestions() {
           </div>
         </div>
 
+        {pageError && (
+          <Card className="mb-6 border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            {pageError}
+          </Card>
+        )}
+
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-          <TabsList className="grid w-full grid-cols-2 gap-3 bg-transparent p-0 sm:grid-cols-4">
+          <TabsList className="grid h-auto w-full grid-cols-4 gap-1 bg-transparent p-0 sm:gap-3">
             <TabsTrigger
               value="saved"
-              className="group flex h-20 flex-col items-start justify-between rounded-2xl border border-gray-200 bg-white px-4 py-3 text-left shadow-sm transition data-[state=active]:border-yellow-400 data-[state=active]:bg-yellow-50 data-[state=active]:shadow-md"
+              className="group flex h-14 flex-row items-center justify-center rounded-xl border border-gray-200 bg-white px-1 py-2 text-center shadow-sm transition data-[state=active]:border-yellow-400 data-[state=active]:bg-yellow-50 data-[state=active]:shadow-md sm:h-20 sm:flex-col sm:items-start sm:justify-between sm:rounded-2xl sm:px-4 sm:py-3 sm:text-left"
             >
-              <div className="flex w-full items-start justify-between gap-3">
+              <div className="hidden w-full items-start justify-between gap-3 sm:flex">
                 <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-yellow-400 text-xs font-bold text-gray-900">
                   01
                 </span>
                 <FolderOpen className="h-5 w-5 text-gray-400 transition group-data-[state=active]:text-yellow-600" />
               </div>
-              <span className="text-sm font-semibold text-gray-900">저장된 문제 ({savedQuestions.length})</span>
+              <span className="text-[11px] font-semibold leading-tight text-gray-900 sm:text-sm">저장된 문제 ({savedQuestions.length})</span>
             </TabsTrigger>
             <TabsTrigger
               value="phrases"
-              className="group flex h-20 flex-col items-start justify-between rounded-2xl border border-gray-200 bg-white px-4 py-3 text-left shadow-sm transition data-[state=active]:border-yellow-400 data-[state=active]:bg-yellow-50 data-[state=active]:shadow-md"
+              className="group flex h-14 flex-row items-center justify-center rounded-xl border border-gray-200 bg-white px-1 py-2 text-center shadow-sm transition data-[state=active]:border-yellow-400 data-[state=active]:bg-yellow-50 data-[state=active]:shadow-md sm:h-20 sm:flex-col sm:items-start sm:justify-between sm:rounded-2xl sm:px-4 sm:py-3 sm:text-left"
             >
-              <div className="flex w-full items-start justify-between gap-3">
+              <div className="hidden w-full items-start justify-between gap-3 sm:flex">
                 <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-gray-900">
                   02
                 </span>
                 <MessageSquare className="h-5 w-5 text-gray-400 transition group-data-[state=active]:text-yellow-600" />
               </div>
-              <span className="text-sm font-semibold text-gray-900">필수 문장 ({savedPhrases.length})</span>
+              <span className="text-[11px] font-semibold leading-tight text-gray-900 sm:text-sm">필수 문장 ({savedPhrases.length})</span>
             </TabsTrigger>
             <TabsTrigger
               value="words"
-              className="group flex h-20 flex-col items-start justify-between rounded-2xl border border-gray-200 bg-white px-4 py-3 text-left shadow-sm transition data-[state=active]:border-yellow-400 data-[state=active]:bg-yellow-50 data-[state=active]:shadow-md"
+              className="group flex h-14 flex-row items-center justify-center rounded-xl border border-gray-200 bg-white px-1 py-2 text-center shadow-sm transition data-[state=active]:border-yellow-400 data-[state=active]:bg-yellow-50 data-[state=active]:shadow-md sm:h-20 sm:flex-col sm:items-start sm:justify-between sm:rounded-2xl sm:px-4 sm:py-3 sm:text-left"
             >
-              <div className="flex w-full items-start justify-between gap-3">
+              <div className="hidden w-full items-start justify-between gap-3 sm:flex">
                 <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-gray-900">
                   03
                 </span>
                 <BookOpen className="h-5 w-5 text-gray-400 transition group-data-[state=active]:text-yellow-600" />
               </div>
-              <span className="text-sm font-semibold text-gray-900">
-                저장된 단어 ({savedWordGroups.reduce((sum, group) => sum + group.words.length, 0)})
+              <span className="text-[11px] font-semibold leading-tight text-gray-900 sm:text-sm">
+                저장된 단어 ({savedWordCount})
               </span>
             </TabsTrigger>
             <TabsTrigger
               value="deleted"
-              className="group flex h-20 flex-col items-start justify-between rounded-2xl border border-gray-200 bg-white px-4 py-3 text-left shadow-sm transition data-[state=active]:border-yellow-400 data-[state=active]:bg-yellow-50 data-[state=active]:shadow-md"
+              className="group flex h-14 flex-row items-center justify-center rounded-xl border border-gray-200 bg-white px-1 py-2 text-center shadow-sm transition data-[state=active]:border-yellow-400 data-[state=active]:bg-yellow-50 data-[state=active]:shadow-md sm:h-20 sm:flex-col sm:items-start sm:justify-between sm:rounded-2xl sm:px-4 sm:py-3 sm:text-left"
             >
-              <div className="flex w-full items-start justify-between gap-3">
+              <div className="hidden w-full items-start justify-between gap-3 sm:flex">
                 <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-gray-900">
                   04
                 </span>
                 <Trash2 className="h-5 w-5 text-gray-400 transition group-data-[state=active]:text-yellow-600" />
               </div>
-              <span className="text-sm font-semibold text-gray-900">휴지통 ({deletedQuestions.length})</span>
+              <span className="text-[11px] font-semibold leading-tight text-gray-900 sm:text-sm">휴지통 ({deletedQuestions.length})</span>
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="saved" className="mt-10 pt-2">
-            {savedQuestions.length === 0 ? (
-              <Card className="bg-white p-12 text-center">
-                <FolderOpen className="mx-auto mb-4 h-16 w-16 text-gray-300" />
-                <h3 className="mb-2 text-xl font-semibold text-gray-900">저장된 문제가 없습니다</h3>
-                <p className="mb-6 text-gray-600">연습 중에 문제를 저장하면 여기서 다시 볼 수 있습니다.</p>
-                <Button onClick={() => navigate("/practice/setup")} className="bg-yellow-400 text-gray-900 hover:bg-yellow-500">
-                  연습 시작하기
-                </Button>
-              </Card>
-            ) : (
-              <div className="space-y-6">
-                <Card className="border border-gray-200 bg-gray-50 p-4">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <h2 className="text-lg font-semibold text-gray-900">저장된 주제별 문제</h2>
-                      <p className="text-sm text-gray-600">
-                        PracticeSetup의 주제 목록을 기준으로 저장된 문제를 확인하세요.
-                      </p>
-                    </div>
-                    <div className="text-sm text-gray-500">저장된 문제: {savedQuestions.length}개</div>
-                  </div>
-                </Card>
-
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  {topicCategories.map((topic) => {
-                    const count = topicCounts[topic] ?? 0;
-                    const isActive = activeTopic === topic;
+            <div className="space-y-6">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  {primaryCategories.map((category) => {
+                    const count = primaryCounts[category as keyof typeof primaryCounts] ?? 0;
+                    const isActive = activeGroup === category;
 
                     return (
                       <button
-                        key={topic}
+                        key={category}
                         type="button"
                         onClick={() => {
-                          setActiveTopic(topic);
+                          if (activeGroup === category) {
+                            setActiveGroup(null);
+                            setActiveTopic(null);
+                          } else {
+                            setActiveGroup(category);
+                            setActiveTopic(category === topicGroupLabel ? null : category);
+                          }
                           setOpenAnswers(null);
                         }}
                         className={`rounded-2xl border px-4 py-3 text-left transition focus:outline-none focus:ring-2 focus:ring-yellow-400 ${
@@ -306,7 +381,7 @@ export function SavedQuestions() {
                         }`}
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-sm font-medium text-gray-900">{topic}</span>
+                          <span className="text-sm font-medium text-gray-900">{category}</span>
                           <span className="text-xs font-semibold text-gray-600">{count}개</span>
                         </div>
                       </button>
@@ -314,21 +389,37 @@ export function SavedQuestions() {
                   })}
                 </div>
 
+                {activeGroup === topicGroupLabel && (
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    {visibleTopicCategories.map((topic) => {
+                      const count = topicCounts[topic] ?? 0;
+                      const isActive = activeTopic === topic;
+
+                      return (
+                        <button
+                          key={topic}
+                          type="button"
+                          onClick={() => {
+                            setActiveTopic((currentTopic) => (currentTopic === topic ? null : topic));
+                            setOpenAnswers(null);
+                          }}
+                          className={`rounded-2xl border px-4 py-3 text-left transition focus:outline-none focus:ring-2 focus:ring-yellow-400 ${
+                            isActive ? "border-yellow-400 bg-yellow-50 shadow-sm" : "border-gray-200 bg-white hover:border-gray-300"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-sm font-medium text-gray-900">{topic}</span>
+                            <span className="text-xs font-semibold text-gray-600">{count}개</span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
                 <div>
                   {activeTopic ? (
                     <div className="space-y-4">
-                      <Card className="border border-yellow-200 bg-white p-4">
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                          <div>
-                            <h3 className="text-xl font-semibold text-gray-900">{activeTopic}</h3>
-                            <p className="text-sm text-gray-600">선택한 주제의 저장된 문제를 확인하고 다시 풀어보세요.</p>
-                          </div>
-                          <Button size="sm" variant="outline" onClick={() => setActiveTopic(null)}>
-                            주제 초기화
-                          </Button>
-                        </div>
-                      </Card>
-
                       {filteredQuestions.length === 0 ? (
                         <Card className="border border-gray-200 bg-white p-10 text-center">
                           <FolderOpen className="mx-auto mb-4 h-14 w-14 text-gray-300" />
@@ -394,7 +485,7 @@ export function SavedQuestions() {
                                     <div className="flex flex-shrink-0 gap-2">
                                       <Button
                                         size="sm"
-                                        onClick={() => navigate("/practice/question")}
+                                        onClick={() => handleRetryQuestion(item)}
                                         className="gap-2 bg-yellow-400 text-gray-900 hover:bg-yellow-500"
                                       >
                                         <Play className="h-4 w-4" />
@@ -404,7 +495,7 @@ export function SavedQuestions() {
                                         size="sm"
                                         variant="outline"
                                         className="text-red-600 hover:bg-red-50 hover:text-red-700"
-                                        onClick={() => alert("문제가 휴지통으로 이동했습니다.")}
+                                        onClick={() => void handleDeleteQuestion(item.id)}
                                       >
                                         <Trash2 className="h-4 w-4" />
                                       </Button>
@@ -426,7 +517,6 @@ export function SavedQuestions() {
                   )}
                 </div>
               </div>
-            )}
           </TabsContent>
 
           <TabsContent value="phrases" className="mt-10 pt-2">
@@ -442,7 +532,13 @@ export function SavedQuestions() {
               </Card>
 
               <div className="grid gap-4">
-                {savedPhrases.map((item) => {
+                {savedPhrases.length === 0 ? (
+                  <Card className="bg-white p-10 text-center">
+                    <MessageSquare className="mx-auto mb-4 h-14 w-14 text-gray-300" />
+                    <h3 className="mb-2 text-lg font-semibold text-gray-900">저장된 필수 문장이 없습니다</h3>
+                    <p className="text-sm text-gray-600">학습 자료에서 문장을 저장하면 여기서 다시 볼 수 있습니다.</p>
+                  </Card>
+                ) : savedPhrases.map((item) => {
                   const isOpen = expandedPhrase === item.phrase;
 
                   return (
@@ -482,7 +578,13 @@ export function SavedQuestions() {
               </Card>
 
               <div className="space-y-6">
-                {savedWordGroups.map((group) => (
+                {savedWordGroups.length === 0 ? (
+                  <Card className="bg-white p-10 text-center">
+                    <BookOpen className="mx-auto mb-4 h-14 w-14 text-gray-300" />
+                    <h3 className="mb-2 text-lg font-semibold text-gray-900">저장된 단어가 없습니다</h3>
+                    <p className="text-sm text-gray-600">학습 자료에서 단어를 저장하면 저장된 단어만 여기에 표시됩니다.</p>
+                  </Card>
+                ) : savedWordGroups.map((group) => (
                   <Card key={group.topic} className="bg-white p-6">
                     <div className="mb-4 flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -549,7 +651,7 @@ export function SavedQuestions() {
                           <p className="text-sm text-gray-500">삭제일: {item.deletedDate}</p>
                         </div>
                         <div className="flex flex-shrink-0 gap-2">
-                          <Button size="sm" variant="outline" onClick={() => alert("문제가 복원되었습니다.")} className="gap-2">
+                          <Button size="sm" variant="outline" onClick={() => void handleRestoreQuestion(item.id)} className="gap-2">
                             <RotateCcw className="h-4 w-4" />
                             복원
                           </Button>
@@ -559,7 +661,7 @@ export function SavedQuestions() {
                             className="text-red-600 hover:bg-red-50 hover:text-red-700"
                             onClick={() => {
                               if (window.confirm("문제를 영구 삭제하시겠습니까?")) {
-                                alert("문제가 영구 삭제되었습니다.");
+                                alert("현재는 휴지통 보관만 지원합니다.");
                               }
                             }}
                           >
