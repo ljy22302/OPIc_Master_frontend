@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "motion/react";
 import { ArrowLeft, ArrowUp, Bookmark, BookOpen, MessageSquare } from "lucide-react";
@@ -21,6 +21,35 @@ type TopicItem = {
   topic: string;
   words: string[];
 };
+
+type SavedPhraseRecord = {
+  phrase: string;
+  meaning: string;
+  topic: string;
+};
+
+type SavedWordRecord = {
+  topic: string;
+  word: string;
+  meaning: string;
+};
+
+const savedPhrasesStorageKey = "opicSavedPhrases";
+const savedWordsStorageKey = "opicSavedWords";
+
+function readStoredItems<T>(key: string): T[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  try {
+    const rawValue = window.localStorage.getItem(key);
+    const parsed = rawValue ? JSON.parse(rawValue) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
 
 const essentialPhrases: Record<string, PhraseItem[]> = {
   introduction: [
@@ -314,25 +343,43 @@ const usefulTips: Array<{ title: string; content: TipItem[] }> = [
 
 export function Resources() {
   const navigate = useNavigate();
-  const [savedPhrases, setSavedPhrases] = useState<string[]>([]);
+  const [savedPhrases, setSavedPhrases] = useState<SavedPhraseRecord[]>(() =>
+    readStoredItems<SavedPhraseRecord>(savedPhrasesStorageKey),
+  );
   const [expandedMeanings, setExpandedMeanings] = useState<string[]>([]);
-  const [savedWords, setSavedWords] = useState<string[]>([]);
+  const [savedWords, setSavedWords] = useState<SavedWordRecord[]>(() => readStoredItems<SavedWordRecord>(savedWordsStorageKey));
   const [expandedTip, setExpandedTip] = useState<number | null>(null);
+
+  useEffect(() => {
+    window.localStorage.setItem(savedPhrasesStorageKey, JSON.stringify(savedPhrases));
+  }, [savedPhrases]);
+
+  useEffect(() => {
+    window.localStorage.setItem(savedWordsStorageKey, JSON.stringify(savedWords));
+  }, [savedWords]);
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const toggleSavedPhrase = (phrase: string) => {
-    setSavedPhrases((prev) => (prev.includes(phrase) ? prev.filter((item) => item !== phrase) : [...prev, phrase]));
+  const toggleSavedPhrase = (phraseItem: PhraseItem, topic: string) => {
+    setSavedPhrases((prev) =>
+      prev.some((item) => item.phrase === phraseItem.phrase)
+        ? prev.filter((item) => item.phrase !== phraseItem.phrase)
+        : [...prev, { phrase: phraseItem.phrase, meaning: phraseItem.meaning, topic }],
+    );
   };
 
   const toggleMeaning = (phrase: string) => {
     setExpandedMeanings((prev) => (prev.includes(phrase) ? prev.filter((item) => item !== phrase) : [...prev, phrase]));
   };
 
-  const toggleSavedWord = (word: string) => {
-    setSavedWords((prev) => (prev.includes(word) ? prev.filter((item) => item !== word) : [...prev, word]));
+  const toggleSavedWord = (topic: string, word: string, meaning: string) => {
+    setSavedWords((prev) =>
+      prev.some((item) => item.word === word)
+        ? prev.filter((item) => item.word !== word)
+        : [...prev, { topic, word, meaning }],
+    );
   };
 
   return (
@@ -398,7 +445,7 @@ export function Resources() {
 
                   <div className="space-y-3">
                     {phrases.map((item) => {
-                      const isSaved = savedPhrases.includes(item.phrase);
+                      const isSaved = savedPhrases.some((savedItem) => savedItem.phrase === item.phrase);
                       const isExpanded = expandedMeanings.includes(item.phrase);
 
                       return (
@@ -422,7 +469,7 @@ export function Resources() {
                               size="icon"
                               variant="ghost"
                               className={`h-9 w-9 rounded-full p-0 ${isSaved ? "text-yellow-600" : "text-gray-700"}`}
-                              onClick={() => toggleSavedPhrase(item.phrase)}
+                              onClick={() => toggleSavedPhrase(item, category)}
                               aria-label={isSaved ? "저장됨" : "저장하기"}
                             >
                               <Bookmark className="h-4 w-4" fill={isSaved ? "currentColor" : "none"} />
@@ -447,13 +494,13 @@ export function Resources() {
                       <h3 className="text-xl font-bold text-gray-900">{topic.topic}</h3>
                     </div>
                     <span className="text-sm text-gray-500">
-                      {topic.words.filter((word) => savedWords.includes(word)).length}개 저장됨
+                      {topic.words.filter((word) => savedWords.some((item) => item.word === word)).length}개 저장됨
                     </span>
                   </div>
 
                   <div className="grid gap-3 sm:grid-cols-2">
                     {topic.words.map((word) => {
-                      const isSaved = savedWords.includes(word);
+                      const isSaved = savedWords.some((item) => item.word === word);
                       const meaning = vocabularyMeanings[word] ?? "";
 
                       return (
@@ -469,7 +516,7 @@ export function Resources() {
                             size="icon"
                             variant="ghost"
                             className={`h-9 w-9 rounded-full p-0 ${isSaved ? "text-yellow-600" : "text-gray-700"}`}
-                            onClick={() => toggleSavedWord(word)}
+                            onClick={() => toggleSavedWord(topic.topic, word, meaning)}
                             aria-label={isSaved ? "저장됨" : "저장하기"}
                           >
                             <Bookmark className="h-4 w-4" fill={isSaved ? "currentColor" : "none"} />
