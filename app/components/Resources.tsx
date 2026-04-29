@@ -351,7 +351,6 @@ export function Resources() {
   const [savedPhrases, setSavedPhrases] = useState<SavedPhraseRecord[]>(() =>
     readStoredItems<SavedPhraseRecord>(savedPhrasesStorageKey),
   );
-  const [expandedMeanings, setExpandedMeanings] = useState<string[]>([]);
   const [savedWords, setSavedWords] = useState<SavedWordRecord[]>(() => readStoredItems<SavedWordRecord>(savedWordsStorageKey));
   const [expandedTip, setExpandedTip] = useState<number | null>(null);
   const [selectedVocabularyTopic, setSelectedVocabularyTopic] = useState<string | null>(null);
@@ -374,10 +373,6 @@ export function Resources() {
         ? prev.filter((item) => item.phrase !== phraseItem.phrase)
         : [...prev, { phrase: phraseItem.phrase, meaning: phraseItem.meaning, topic }],
     );
-  };
-
-  const toggleMeaning = (phrase: string) => {
-    setExpandedMeanings((prev) => (prev.includes(phrase) ? prev.filter((item) => item !== phrase) : [...prev, phrase]));
   };
 
   const toggleSavedWord = (topic: string, word: string, meaning: string) => {
@@ -454,24 +449,13 @@ export function Resources() {
                   <div className="space-y-3">
                     {phrases.map((item) => {
                       const isSaved = savedPhrases.some((savedItem) => savedItem.phrase === item.phrase);
-                      const isExpanded = expandedMeanings.includes(item.phrase);
 
                       return (
                         <div key={item.phrase} className="rounded-lg border border-yellow-100 bg-yellow-50 p-3">
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0 flex-1">
                               <p className="font-medium text-gray-900">{item.phrase}</p>
-                              <div className="mt-2 flex flex-wrap items-center gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-auto gap-1 px-0 py-0 text-gray-700 hover:bg-transparent hover:text-gray-900"
-                                  onClick={() => toggleMeaning(item.phrase)}
-                                >
-                                  ▶해석
-                                </Button>
-                                {isExpanded && <p className="text-sm text-gray-600">{item.meaning}</p>}
-                              </div>
+                              <p className="mt-2 text-sm text-gray-600">{item.meaning}</p>
                             </div>
                             <Button
                               size="icon"
