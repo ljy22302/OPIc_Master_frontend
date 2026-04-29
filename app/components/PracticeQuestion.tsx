@@ -17,6 +17,11 @@ import ossCharacter from "./OSS_character.png";
 type TransitionPhase = "saving" | "preparing" | null;
 type TransitionAction = "next" | "result" | null;
 
+type HintWord = {
+  word: string;
+  meaning: string;
+};
+
 type PracticeQuestionState = {
   difficultyLabel?: string;
   selectedType?: string;
@@ -29,6 +34,42 @@ type PracticeQuestionState = {
   questionResults?: EvaluationAnswer[];
   sessionId?: number;
 };
+
+const hintWordMeanings: Record<string, string> = {
+  activities: "활동",
+  atmosphere: "분위기",
+  benefits: "장점",
+  cafe: "카페",
+  destination: "목적지",
+  enjoyment: "즐거움",
+  exercise: "운동",
+  favorite: "가장 좋아하는",
+  feelings: "느낌",
+  frequency: "빈도",
+  menu: "메뉴",
+  people: "사람들",
+};
+
+function parseHintWords(hint?: string): HintWord[] {
+  if (!hint) {
+    return [];
+  }
+
+  return hint
+    .split(",")
+    .map((word) => word.trim())
+    .filter(Boolean)
+    .map((item) => {
+      const match = item.match(/^(.+?)\s*\((.+)\)$/);
+      const word = match ? match[1].trim() : item;
+      const meaning = match ? match[2].trim() : hintWordMeanings[word.toLowerCase()] || "뜻 확인";
+
+      return {
+        word,
+        meaning,
+      };
+    });
+}
 
 export function PracticeQuestion() {
   const recordingLimit = 120;
@@ -169,6 +210,7 @@ export function PracticeQuestion() {
   }, [selectedTopicLabels, selectedType, selectedTypeLabel]);
 
   const currentQuestionItem = visibleQuestions[currentQuestion];
+  const hintWords = parseHintWords(currentQuestionItem?.hint);
   const currentSavedResult = questionResults[currentQuestion];
   const isBusy = isUploading || isEvaluating || isPreparingSession;
 
@@ -410,11 +452,21 @@ export function PracticeQuestion() {
                         key={`hint-${currentQuestion}`}
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="w-full text-left"
+                        className="grid w-full grid-cols-1 gap-2 text-left sm:grid-cols-2 lg:grid-cols-3"
                       >
-                        <p className="whitespace-pre-wrap break-words text-sm font-medium leading-relaxed text-gray-700 sm:text-base">
-                          {currentQuestionItem?.hint}
-                        </p>
+                        {hintWords.map((item) => (
+                          <div
+                            key={`${item.word}-${item.meaning}`}
+                            className="rounded-md border border-sky-100 bg-white px-3 py-2 shadow-sm"
+                          >
+                            <span className="block whitespace-nowrap text-xs font-semibold text-gray-900 sm:text-sm">
+                              {item.word}
+                            </span>
+                            <span className="mt-1 block break-keep text-xs font-medium leading-snug text-gray-600 sm:text-sm">
+                              {item.meaning}
+                            </span>
+                          </div>
+                        ))}
                       </motion.div>
                     ) : (
                       <span className="inline-flex items-center gap-2 text-base font-semibold text-sky-900 sm:text-2xl">
