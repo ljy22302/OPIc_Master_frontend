@@ -108,7 +108,6 @@ export type EvaluationAnswerFeedback = {
   scores: EvaluationScores;
   feedback: EvaluationFeedbackText;
   tips: string[];
-  estimatedSubGrade?: string | null;
   tooShort: boolean;
   tooMuchSilence: boolean;
   questionRelevance: string;
@@ -134,7 +133,6 @@ export type EvaluationAnswer = {
   transcriptConfidence?: number | null;
   metrics: EvaluationMetrics;
   feedback: EvaluationAnswerFeedback;
-  estimatedSubGrade?: string | null;
   createdAt: string;
   updatedAt: string;
 };

@@ -282,9 +282,6 @@ export function EvaluationResultView({
                     <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div>
                         <h4 className="font-semibold text-gray-900">Q{index + 1}. {answer.questionText}</h4>
-                        <p className="mt-1 text-sm text-gray-500">
-                          예상 등급: {answer.estimatedSubGrade || "데이터 부족"}
-                        </p>
                       </div>
                       <Button
                         type="button"
