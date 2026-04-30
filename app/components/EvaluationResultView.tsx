@@ -364,7 +364,7 @@ export function EvaluationResultView({
                           <BarMetricItem label="질문 키워드 일치도" value={Math.round(answer.metrics.keywordSimilarity * 100)} max={100} suffix="%" />
                           <BarMetricItem label="어휘 다양성" value={Math.round(answer.metrics.lexicalDiversity * 100)} max={100} suffix="%" />
                           <BarMetricItem label="침묵 비율" value={Math.round(answer.metrics.silenceRatio * 100)} max={100} suffix="%" />
-                          <BarMetricItem label="STT 신뢰도" value={Math.round((answer.transcriptConfidence || 0) * 100)} max={100} suffix="%" />
+                          <BarMetricItem label="연결어 사용 밀도" value={Number((answer.metrics.connectorRatio ?? 0).toFixed(2))} max={4} suffix="/문장" />
                         </div>
 
                         <div className="grid gap-3 lg:grid-cols-2">

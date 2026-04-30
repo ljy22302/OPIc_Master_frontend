@@ -89,6 +89,8 @@ export type EvaluationMetrics = {
   repetitionRate: number;
   lexicalDiversity: number;
   keywordSimilarity: number;
+  connectorCount?: number;
+  connectorRatio?: number;
   speechDurationSeconds: number;
   silenceDurationSeconds: number;
   silenceRatio: number;
@@ -130,7 +132,6 @@ export type EvaluationAnswer = {
   originalTranscript: string;
   editedTranscript?: string | null;
   usedTranscript: string;
-  transcriptConfidence?: number | null;
   metrics: EvaluationMetrics;
   feedback: EvaluationAnswerFeedback;
   createdAt: string;
