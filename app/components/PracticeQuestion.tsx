@@ -488,12 +488,12 @@ export function PracticeQuestion() {
                         {hintWords.map((item) => (
                           <div
                             key={`${item.word}-${item.meaning}`}
-                            className="flex items-center justify-between gap-1.5 rounded-md border border-sky-100 bg-white/70 px-2 py-1.5 shadow-sm sm:gap-3 sm:px-3 sm:py-2"
+                            className="grid min-h-10 grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] items-center gap-1.5 rounded-md border border-sky-100 bg-white/60 px-2 py-1.5 shadow-sm sm:min-h-11 sm:gap-2 sm:px-3 sm:py-2"
                           >
-                            <span className="min-w-0 truncate text-[10px] font-semibold text-gray-900 sm:text-xs">
+                            <span className="min-w-0 whitespace-normal break-words text-[9px] font-semibold leading-tight text-gray-900 sm:text-[11px]">
                               {item.word}
                             </span>
-                            <span className="shrink-0 break-keep text-[10px] font-medium leading-snug text-gray-600 sm:text-xs">
+                            <span className="min-w-0 break-keep text-right text-[9px] font-medium leading-tight text-gray-600 sm:text-[11px]">
                               {item.meaning}
                             </span>
                           </div>
