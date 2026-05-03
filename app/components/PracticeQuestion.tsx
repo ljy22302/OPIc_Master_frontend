@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { motion } from "motion/react";
 import { ArrowLeft, HelpCircle, Lightbulb, Mic, Square, Volume2 } from "lucide-react";
@@ -293,7 +293,7 @@ export function PracticeQuestion() {
       setTransitionMessage(
         nextAction === "result"
           ? "최종 결과를 준비하고 있습니다..."
-          : "답변을 저장하고 평가하고 있습니다...",
+          : "답변을 저장하고 있습니다...",
       );
       setTransitionPhase("saving");
       setIsEvaluating(true);
