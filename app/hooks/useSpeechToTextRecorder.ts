@@ -16,9 +16,108 @@ function getSupportedMimeType() {
 }
 
 function getFileExtension(mimeType: string) {
+  if (mimeType.includes("wav")) return "wav";
   if (mimeType.includes("ogg")) return "ogg";
   if (mimeType.includes("mp4")) return "mp4";
   return "webm";
+}
+
+async function createCombinedAudioBlob(segmentBlobs: Blob[], fallbackMimeType: string) {
+  if (segmentBlobs.length <= 1) {
+    return {
+      audioBlob: segmentBlobs[0] || null,
+      mimeType: fallbackMimeType,
+    };
+  }
+
+  try {
+    const wavBlob = await mergeAudioBlobsAsWav(segmentBlobs);
+    return {
+      audioBlob: wavBlob,
+      mimeType: "audio/wav",
+    };
+  } catch {
+    return {
+      audioBlob: new Blob(segmentBlobs, { type: fallbackMimeType }),
+      mimeType: fallbackMimeType,
+    };
+  }
+}
+
+async function mergeAudioBlobsAsWav(segmentBlobs: Blob[]) {
+  const AudioContextClass =
+    window.AudioContext ||
+    (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+
+  if (!AudioContextClass) {
+    throw new Error("AudioContext is not supported.");
+  }
+
+  const audioContext = new AudioContextClass();
+  try {
+    const decodedBuffers = await Promise.all(
+      segmentBlobs.map(async (blob) => {
+        const arrayBuffer = await blob.arrayBuffer();
+        return audioContext.decodeAudioData(arrayBuffer.slice(0));
+      }),
+    );
+    const sampleRate = audioContext.sampleRate;
+    const totalLength = decodedBuffers.reduce(
+      (sum, buffer) => sum + Math.ceil(buffer.duration * sampleRate),
+      0,
+    );
+    const output = audioContext.createBuffer(1, totalLength, sampleRate);
+    const outputData = output.getChannelData(0);
+    let offset = 0;
+
+    decodedBuffers.forEach((buffer) => {
+      const sourceData = buffer.getChannelData(0);
+      outputData.set(sourceData, offset);
+      offset += sourceData.length;
+    });
+
+    return audioBufferToWavBlob(output);
+  } finally {
+    void audioContext.close();
+  }
+}
+
+function audioBufferToWavBlob(audioBuffer: AudioBuffer) {
+  const samples = audioBuffer.getChannelData(0);
+  const bytesPerSample = 2;
+  const headerSize = 44;
+  const dataSize = samples.length * bytesPerSample;
+  const buffer = new ArrayBuffer(headerSize + dataSize);
+  const view = new DataView(buffer);
+
+  writeString(view, 0, "RIFF");
+  view.setUint32(4, 36 + dataSize, true);
+  writeString(view, 8, "WAVE");
+  writeString(view, 12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, audioBuffer.sampleRate, true);
+  view.setUint32(28, audioBuffer.sampleRate * bytesPerSample, true);
+  view.setUint16(32, bytesPerSample, true);
+  view.setUint16(34, 8 * bytesPerSample, true);
+  writeString(view, 36, "data");
+  view.setUint32(40, dataSize, true);
+
+  let offset = headerSize;
+  for (const sample of samples) {
+    const clamped = Math.max(-1, Math.min(1, sample));
+    view.setInt16(offset, clamped < 0 ? clamped * 0x8000 : clamped * 0x7fff, true);
+    offset += bytesPerSample;
+  }
+
+  return new Blob([view], { type: "audio/wav" });
+}
+
+function writeString(view: DataView, offset: number, value: string) {
+  for (let index = 0; index < value.length; index++) {
+    view.setUint8(offset + index, value.charCodeAt(index));
+  }
 }
 
 type SpeechRecognitionType = {
@@ -83,6 +182,9 @@ export function useSpeechToTextRecorder(
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const accumulatedAudioSegmentsRef = useRef<Blob[]>([]);
+  const accumulatedDurationSecondsRef = useRef(0);
+  const activeMimeTypeRef = useRef("");
   const recordingStartedAtRef = useRef<number | null>(null);
   const stopResolveRef = useRef<((value: RecordingResult) => void) | null>(null);
   const recognitionRef = useRef<SpeechRecognitionType | null>(null);
@@ -102,6 +204,10 @@ export function useSpeechToTextRecorder(
   }, []);
 
   async function startRecording() {
+    if (mediaRecorderRef.current?.state === "recording") {
+      return;
+    }
+
     if (!navigator.mediaDevices?.getUserMedia) {
       setError("This browser does not support microphone access.");
       return;
@@ -114,18 +220,17 @@ export function useSpeechToTextRecorder(
 
     try {
       setError("");
-      setLastRecording(null);
       setIsFinalizing(false);
-      clientTranscriptRef.current = "";
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaStreamRef.current = stream;
 
-      const mimeType = getSupportedMimeType();
+      const mimeType = activeMimeTypeRef.current || getSupportedMimeType();
       const recorder = mimeType
         ? new MediaRecorder(stream, { mimeType })
         : new MediaRecorder(stream);
 
+      activeMimeTypeRef.current = recorder.mimeType || mimeType || "audio/webm";
       audioChunksRef.current = [];
 
       recorder.ondataavailable = (event) => {
@@ -148,21 +253,26 @@ export function useSpeechToTextRecorder(
         setIsRecording(true);
       };
 
-      recorder.onstop = () => {
+      recorder.onstop = async () => {
         setIsRecording(false);
         setIsFinalizing(true);
 
         const finalMimeType = recorder.mimeType || mimeType || "audio/webm";
-        const audioBlob = new Blob(audioChunksRef.current, { type: finalMimeType });
-        const durationSeconds = recordingStartedAtRef.current
+        const segmentDurationSeconds = recordingStartedAtRef.current
           ? Math.max(0, Math.round((Date.now() - recordingStartedAtRef.current) / 1000))
           : 0;
+        const segmentBlob = new Blob(audioChunksRef.current, { type: finalMimeType });
+        if (segmentBlob.size > 0) {
+          accumulatedAudioSegmentsRef.current = [...accumulatedAudioSegmentsRef.current, segmentBlob];
+        }
+        accumulatedDurationSecondsRef.current += segmentDurationSeconds;
+        const combinedAudio = await createCombinedAudioBlob(accumulatedAudioSegmentsRef.current, finalMimeType);
 
         const result: RecordingResult = {
-          audioBlob: audioBlob.size > 0 ? audioBlob : null,
-          mimeType: finalMimeType,
-          fileName: `recording.${getFileExtension(finalMimeType)}`,
-          durationSeconds,
+          audioBlob: combinedAudio.audioBlob && combinedAudio.audioBlob.size > 0 ? combinedAudio.audioBlob : null,
+          mimeType: combinedAudio.mimeType,
+          fileName: `recording.${getFileExtension(combinedAudio.mimeType)}`,
+          durationSeconds: accumulatedDurationSecondsRef.current,
           clientTranscript: clientTranscriptRef.current,
         };
 
@@ -232,6 +342,10 @@ export function useSpeechToTextRecorder(
   function resetRecording() {
     setError("");
     setLastRecording(null);
+    audioChunksRef.current = [];
+    accumulatedAudioSegmentsRef.current = [];
+    accumulatedDurationSecondsRef.current = 0;
+    activeMimeTypeRef.current = "";
     clientTranscriptRef.current = "";
   }
 

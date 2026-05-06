@@ -273,8 +273,6 @@ export function PracticeQuestion() {
     }
 
     if (!isRecording) {
-      setTimeLeft(recordingLimit);
-      resetRecording();
       await startRecording();
       return;
     }

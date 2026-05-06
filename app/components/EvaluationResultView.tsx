@@ -93,20 +93,6 @@ function formatPercent(value: number | undefined) {
   return `${Math.round(value * 100)}%`;
 }
 
-function GradeGate({
-  label,
-  passed,
-}: {
-  label: string;
-  passed: boolean;
-}) {
-  return (
-    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${passed ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-      {label} {passed ? "충족" : "연습 필요"}
-    </span>
-  );
-}
-
 function OpicGradeCard({ opic }: { opic: OpicEvaluation }) {
   const metrics = opic.metricSnapshot || {};
   const grade = opic.grade || "데이터 부족";
@@ -120,15 +106,6 @@ function OpicGradeCard({ opic }: { opic: OpicEvaluation }) {
             <p className="text-sm font-semibold text-yellow-300">예상 OPIc 등급</p>
             <p className="mt-3 text-6xl font-black tracking-tight">{grade}</p>
             <p className="mt-2 text-sm text-gray-300">{opic.score100}점 환산</p>
-          </div>
-          <div className="mt-6 flex flex-wrap gap-2">
-            {opic.gate && (
-              <>
-                <GradeGate label="IM2+" passed={opic.gate.im2Candidate} />
-                <GradeGate label="IH" passed={opic.gate.ihCandidate} />
-                <GradeGate label="AL" passed={opic.gate.alCandidate} />
-              </>
-            )}
           </div>
         </div>
 

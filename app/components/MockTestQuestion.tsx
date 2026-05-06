@@ -262,8 +262,6 @@ export function MockTestQuestion() {
     }
 
     if (!isRecording) {
-      setRecordingTime(recordingLimit);
-      resetRecording();
       await startRecording();
       return;
     }
