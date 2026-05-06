@@ -39,10 +39,18 @@ const CATEGORY_LABELS: Record<string, string> = {
   engagement: "호응 유도",
 };
 
-function MetricItem({ label, value }: { label: string; value: string }) {
+function MetricItem({
+  label,
+  value,
+  compact = false,
+}: {
+  label: string;
+  value: string;
+  compact?: boolean;
+}) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-3">
-      <p className="text-xs font-semibold tracking-wide text-gray-500">{label}</p>
+    <div className={`rounded-xl border border-gray-200 bg-white ${compact ? "min-h-16 p-2" : "p-3"}`}>
+      <p className={`${compact ? "text-[11px]" : "text-xs"} font-semibold tracking-wide text-gray-500`}>{label}</p>
       <p className="mt-1 text-sm font-medium text-gray-900 whitespace-pre-wrap">{value}</p>
     </div>
   );
@@ -105,7 +113,7 @@ function OpicGradeCard({ opic }: { opic: OpicEvaluation }) {
           <div>
             <p className="text-sm font-semibold text-yellow-300">예상 OPIc 등급</p>
             <p className="mt-3 text-6xl font-black tracking-tight">{grade}</p>
-            <p className="mt-2 text-sm text-gray-300">{opic.score100}점 환산</p>
+            <p className="mt-2 text-sm text-gray-300">예측 점수 {opic.score100}점</p>
           </div>
         </div>
 
@@ -121,7 +129,7 @@ function OpicGradeCard({ opic }: { opic: OpicEvaluation }) {
             )}
           </div>
 
-          <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mb-5 grid grid-cols-3 gap-2 sm:gap-3">
             <MetricItem label="평균 단어 수" value={`${formatNumber(metrics.wordCount)}개`} />
             <MetricItem label="평균 문장 수" value={`${formatNumber(metrics.sentenceCount, 1)}개`} />
             <MetricItem label="발화 속도" value={`${formatNumber(metrics.speechRateWpm)} wpm`} />
@@ -335,7 +343,7 @@ export function EvaluationResultView({
                   </div>
                   <p className="mb-4 text-sm text-gray-700">{overall.feedback.summary}</p>
                   <p className="mb-5 text-sm text-gray-700">{overall.feedback.focus}</p>
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3">
                     {overallScoreCards.map((item) => (
                       <MetricItem key={item.key} label={item.label} value={`${item.value}`} />
                     ))}
@@ -382,7 +390,6 @@ export function EvaluationResultView({
                             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-yellow-50 to-transparent" />
                           )}
                         </div>
-                        <p className="mt-3 text-right text-xs text-gray-500">* 평가에 사용되었습니다</p>
                         <div className="mt-2 flex justify-end">
                           <Button type="button" variant="ghost" size="sm" onClick={() => toggleAnswer(index)} className="gap-1 text-gray-600 hover:text-gray-900">
                             {expandedAnswers.includes(index) ? (
