@@ -1,5 +1,6 @@
 import { createBrowserRouter } from "react-router";
 import { Root } from "./components/Root";
+import { AuthGuard } from "./components/AuthGuard";
 import { Login } from "./components/Login";
 import { FindAccount } from "./components/FindAccount";
 import { Signup } from "./components/Signup";
@@ -27,17 +28,22 @@ export const router = createBrowserRouter([
       { path: "signup", Component: Signup },
       { path: "reset-password", Component: ResetPassword },
       { path: "intro", Component: Intro },
-      { path: "main", Component: Main },
-      { path: "practice/setup", Component: PracticeSetup },
-      { path: "practice/question", Component: PracticeQuestion },
-      { path: "practice/script", Component: PracticeScript },
-      { path: "practice/result", Component: PracticeResult },
-      { path: "mocktest/setup", Component: MockTestSetup },
-      { path: "mocktest/question", Component: MockTestQuestion },
-      { path: "mocktest/script", Component: MockTestScript },
-      { path: "mocktest/result", Component: MockTestResult },
-      { path: "saved", Component: SavedQuestions },
-      { path: "resources", Component: Resources },
+      {
+        Component: AuthGuard,
+        children: [
+          { path: "main", Component: Main },
+          { path: "practice/setup", Component: PracticeSetup },
+          { path: "practice/question", Component: PracticeQuestion },
+          { path: "practice/script", Component: PracticeScript },
+          { path: "practice/result", Component: PracticeResult },
+          { path: "mocktest/setup", Component: MockTestSetup },
+          { path: "mocktest/question", Component: MockTestQuestion },
+          { path: "mocktest/script", Component: MockTestScript },
+          { path: "mocktest/result", Component: MockTestResult },
+          { path: "saved", Component: SavedQuestions },
+          { path: "resources", Component: Resources },
+        ],
+      },
     ],
   },
 ]);
