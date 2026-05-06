@@ -14,6 +14,7 @@ import {
   getEvaluationSessionResult,
   saveEvaluatedAnswer,
   type EvaluationSession,
+  type OpicEvaluation,
 } from "../lib/evaluationApi";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
@@ -73,6 +74,95 @@ function BarMetricItem({
         {displayValue}{suffix}
       </p>
     </div>
+  );
+}
+
+function formatNumber(value: number | undefined, digits = 0) {
+  if (!Number.isFinite(value)) {
+    return "-";
+  }
+
+  return digits > 0 ? value.toFixed(digits) : Math.round(value).toString();
+}
+
+function formatPercent(value: number | undefined) {
+  if (!Number.isFinite(value)) {
+    return "-";
+  }
+
+  return `${Math.round(value * 100)}%`;
+}
+
+function GradeGate({
+  label,
+  passed,
+}: {
+  label: string;
+  passed: boolean;
+}) {
+  return (
+    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${passed ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+      {label} {passed ? "충족" : "연습 필요"}
+    </span>
+  );
+}
+
+function OpicGradeCard({ opic }: { opic: OpicEvaluation }) {
+  const metrics = opic.metricSnapshot || {};
+  const grade = opic.grade || "데이터 부족";
+  const isHighGrade = grade === "AL" || grade === "IH";
+
+  return (
+    <Card className="mb-8 overflow-hidden border-2 border-yellow-200 bg-white">
+      <div className="grid gap-0 lg:grid-cols-[16rem_1fr]">
+        <div className="flex flex-col justify-between bg-gray-900 p-6 text-white">
+          <div>
+            <p className="text-sm font-semibold text-yellow-300">예상 OPIc 등급</p>
+            <p className="mt-3 text-6xl font-black tracking-tight">{grade}</p>
+            <p className="mt-2 text-sm text-gray-300">{opic.score100}점 환산</p>
+          </div>
+          <div className="mt-6 flex flex-wrap gap-2">
+            {opic.gate && (
+              <>
+                <GradeGate label="IM2+" passed={opic.gate.im2Candidate} />
+                <GradeGate label="IH" passed={opic.gate.ihCandidate} />
+                <GradeGate label="AL" passed={opic.gate.alCandidate} />
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="p-6">
+          <div className="mb-5">
+            <p className="text-sm font-semibold text-gray-500">판정 근거</p>
+            <p className="mt-1 text-base font-medium text-gray-900">{opic.gradeReason || opic.summary}</p>
+            <p className="mt-2 text-sm text-gray-600">{opic.mainFeedback}</p>
+            {opic.gradableAnswers != null && opic.totalAnswers != null && (
+              <p className="mt-2 text-xs text-gray-500">
+                채점 가능 답변 {opic.gradableAnswers}/{opic.totalAnswers}개 기준
+              </p>
+            )}
+          </div>
+
+          <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <MetricItem label="평균 단어 수" value={`${formatNumber(metrics.wordCount)}개`} />
+            <MetricItem label="평균 문장 수" value={`${formatNumber(metrics.sentenceCount, 1)}개`} />
+            <MetricItem label="발화 속도" value={`${formatNumber(metrics.speechRateWpm)} wpm`} />
+            <MetricItem label="침묵 비율" value={formatPercent(metrics.silenceRatio)} />
+            <MetricItem label="연결어" value={`${formatNumber(metrics.connectorCount, 1)}개`} />
+            <MetricItem label="어휘 다양도" value={formatPercent(metrics.lexicalDiversity)} />
+            <MetricItem label="반복 비율" value={formatPercent(metrics.repetitionRate)} />
+            <MetricItem label="주제 일치도" value={formatPercent(metrics.keywordSimilarity)} />
+          </div>
+
+          <div className="rounded-xl bg-yellow-50 p-4 text-sm text-gray-700">
+            {isHighGrade
+              ? "IH/AL은 긴 답변뿐 아니라 자연스러운 흐름, 다양한 연결어, 구체적인 이유와 감정 표현이 함께 필요합니다."
+              : "IM 단계에서는 먼저 답변 길이와 흐름을 안정화한 뒤, 이유-경험-감정-결론 구조로 내용을 확장하는 것이 가장 빠릅니다."}
+          </div>
+        </div>
+      </div>
+    </Card>
   );
 }
 
@@ -176,6 +266,7 @@ export function EvaluationResultView({
 
   const answers = sessionResult?.answers || [];
   const overall = sessionResult?.overall;
+  const opicOverall = overall?.opic;
   const overallScoreCards = useMemo(() => {
     if (!overall) {
       return [];
@@ -218,6 +309,8 @@ export function EvaluationResultView({
           <>
             {overall && (
               <>
+                {opicOverall && <OpicGradeCard opic={opicOverall} />}
+
                 <div className="mb-8 grid gap-6 md:grid-cols-2">
                   <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}>
                     <Card className="h-full bg-white p-6">

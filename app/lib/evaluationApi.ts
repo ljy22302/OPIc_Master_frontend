@@ -119,6 +119,47 @@ export type EvaluationAnswerFeedback = {
   keywordSimilarity: string;
 };
 
+export type OpicGate = {
+  im2Candidate: boolean;
+  ihCandidate: boolean;
+  alCandidate: boolean;
+};
+
+export type OpicMetricSnapshot = {
+  wordCount?: number;
+  sentenceCount?: number;
+  avgSentenceLength?: number;
+  speechDurationSeconds?: number;
+  speechRateWpm?: number;
+  silenceRatio?: number;
+  avgPauseSeconds?: number;
+  fillerRatio?: number;
+  connectorCount?: number;
+  connectorRatio?: number;
+  lexicalDiversity?: number;
+  repetitionRate?: number;
+  keywordSimilarity?: number;
+};
+
+export type OpicEvaluation = {
+  score: number;
+  score100: number;
+  grade?: string;
+  gradeReason?: string;
+  summary: string;
+  mainFeedback: string;
+  weights: Record<string, number>;
+  breakdown: Record<string, number>;
+  weakPoints: string[];
+  tips: string[];
+  tags: string[];
+  gate?: OpicGate;
+  metricSnapshot?: OpicMetricSnapshot;
+  gradableAnswers?: number | null;
+  totalAnswers?: number | null;
+  isGradable: boolean;
+};
+
 export type EvaluationAnswer = {
   id: number;
   sessionId: number;
@@ -133,7 +174,7 @@ export type EvaluationAnswer = {
   editedTranscript?: string | null;
   usedTranscript: string;
   metrics: EvaluationMetrics;
-  feedback: EvaluationAnswerFeedback;
+  feedback: EvaluationAnswerFeedback & { opic?: OpicEvaluation | null };
   createdAt: string;
   updatedAt: string;
 };
@@ -144,6 +185,7 @@ export type EvaluationSessionOverall = {
   feedback: Record<string, string>;
   tips: string[];
   categoryScores: Record<string, number>;
+  opic?: OpicEvaluation | null;
   estimatedGrade?: string | null;
   isGradable: boolean;
 };
