@@ -1,7 +1,7 @@
 ﻿import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "motion/react";
-import { ArrowLeft, ArrowRight, AlertCircle, HelpCircle } from "lucide-react";
+import { ArrowLeft, ArrowRight, AlertCircle, X } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 
@@ -165,26 +165,24 @@ export function MockTestSetup() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="mx-auto max-w-6xl">
-        <div className="mb-8 flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/main")}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2">
+        <div className="mb-8 flex items-start justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/main")}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div className="flex flex-col gap-1">
               <h1 className="text-3xl font-bold text-gray-900">모의고사 모드 설정</h1>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowGuide(true)}
-                className="mt-0.5 h-8 w-8 rounded-full text-gray-500 hover:bg-yellow-100 hover:text-gray-900"
-                aria-label="도움말 보기"
-              >
-                <HelpCircle className="h-5 w-5" />
-              </Button>
+              <p className="text-gray-600">실전과 같은 흐름으로 15문제를 준비해보세요.</p>
             </div>
-            <p className="text-gray-600">실전과 같은 흐름으로 15문제를 준비해보세요.</p>
           </div>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setShowGuide(true)}
+            className="shrink-0 border-yellow-300 bg-white px-4 font-semibold text-gray-900 hover:bg-yellow-50"
+          >
+            추천 선택지
+          </Button>
         </div>
 
         <div className="grid gap-8 lg:grid-cols-[320px_1fr]">
@@ -507,7 +505,7 @@ export function MockTestSetup() {
                   className="h-8 w-8 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-900"
                   aria-label="도움말 닫기"
                 >
-                  <ArrowLeft className="h-4 w-4 rotate-180" />
+                  <X className="h-4 w-4" />
                 </Button>
               </div>
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { motion } from "motion/react";
-import { ArrowLeft, Mic, Square, Volume2 } from "lucide-react";
+import { ArrowLeft, Mic, Play, RotateCcw, Square } from "lucide-react";
 import { useQuestionSpeech } from "../hooks/useQuestionSpeech";
 import { useSpeechToTextRecorder } from "../hooks/useSpeechToTextRecorder";
 import {
@@ -81,7 +81,14 @@ export function MockTestQuestion() {
     questionId: `mock-test-${mockTestQuestions[currentQuestion].id}`,
     language: "en",
   });
-  const { isSpeaking, isSupported: isQuestionSpeechSupported, speak, stop } = useQuestionSpeech();
+  const {
+    isSpeaking,
+    progress: speechProgress,
+    durationMs: speechDurationMs,
+    isSupported: isQuestionSpeechSupported,
+    speak,
+    stop,
+  } = useQuestionSpeech();
 
   useEffect(() => {
     let isMounted = true;
@@ -229,13 +236,6 @@ export function MockTestQuestion() {
     friends: "친구와 함께",
     military: "군대",
   }[livingSituation] || "";
-  const questionTypeLabel = {
-    "Self-Intro": "자기소개",
-    "Topic": "선택 주제",
-    "Role Play": "롤플레이",
-    "Follow-up": "돌발 질문",
-  }[currentQ.type] || currentQ.type;
-
   const handlePlayQuestion = () => {
     if (playCount >= 2 || !currentQ.text) {
       return;
@@ -377,60 +377,16 @@ export function MockTestQuestion() {
           <Progress value={totalProgress} className="h-2" />
         </div>
 
-        {(difficultyLabel ||
-          statusLabel ||
-          studentLabel ||
-          livingSituationLabel ||
-          selectedLeisure.length > 0 ||
-          selectedHobbies.length > 0 ||
-          selectedExercises.length > 0 ||
-          selectedTravel.length > 0) && (
+        {difficultyLabel && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             className="mb-6 rounded-3xl border border-gray-200 bg-white p-4 shadow-sm"
           >
             <div className="flex flex-wrap gap-2">
-              {difficultyLabel && (
-                <span className="inline-flex items-center rounded-full bg-yellow-100 px-3 py-1 text-sm font-semibold text-yellow-800">
-                  {difficultyLabel}
-                </span>
-              )}
-              {statusLabel && (
-                <span className="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-sm text-gray-700">
-                  현재 상태: {statusLabel}
-                </span>
-              )}
-              {studentLabel && (
-                <span className="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-sm text-gray-700">
-                  학생 여부: {studentLabel}
-                </span>
-              )}
-              {livingSituationLabel && (
-                <span className="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-sm text-gray-700">
-                  거주 형태: {livingSituationLabel}
-                </span>
-              )}
-              {selectedLeisure.length > 0 && (
-                <span className="inline-flex items-center rounded-full border border-gray-200 bg-blue-50 px-3 py-1 text-sm text-blue-700">
-                  여가 활동: {selectedLeisure.join(", ")}
-                </span>
-              )}
-              {selectedHobbies.length > 0 && (
-                <span className="inline-flex items-center rounded-full border border-gray-200 bg-blue-50 px-3 py-1 text-sm text-blue-700">
-                  취미 관심사: {selectedHobbies.join(", ")}
-                </span>
-              )}
-              {selectedExercises.length > 0 && (
-                <span className="inline-flex items-center rounded-full border border-gray-200 bg-blue-50 px-3 py-1 text-sm text-blue-700">
-                  운동: {selectedExercises.join(", ")}
-                </span>
-              )}
-              {selectedTravel.length > 0 && (
-                <span className="inline-flex items-center rounded-full border border-gray-200 bg-blue-50 px-3 py-1 text-sm text-blue-700">
-                  휴가/출장: {selectedTravel.join(", ")}
-                </span>
-              )}
+              <span className="inline-flex items-center rounded-full bg-yellow-100 px-3 py-1 text-sm font-semibold text-yellow-800">
+                {difficultyLabel}
+              </span>
             </div>
           </motion.div>
         )}
@@ -454,47 +410,36 @@ export function MockTestQuestion() {
                   </div>
                 </div>
 
-                <Button
-                  variant="ghost"
-                  size="sm"
+                <button
+                  type="button"
                   onClick={handlePlayQuestion}
-                  disabled={playCount >= 2}
-                  className={`gap-2 transition-all disabled:opacity-40 ${
-                    isSpeaking
-                      ? "border-yellow-500 bg-yellow-400 text-gray-900 shadow-md hover:bg-yellow-400"
-                      : "text-gray-700"
-                  }`}
+                  disabled={isSpeaking || playCount >= 2}
+                  className="flex h-8 w-full max-w-64 overflow-hidden rounded-md border border-gray-200 bg-white shadow-sm transition disabled:cursor-default disabled:opacity-100"
+                  aria-label={playCount > 0 ? "문제 다시 듣기" : "문제 듣기"}
                 >
-                  <Volume2 className={`h-4 w-4 ${isSpeaking ? "animate-pulse" : ""}`} />
-                  문제 듣기
-                </Button>
-                {isSpeaking && (
-                  <p className="mt-1 text-center text-xs font-medium text-yellow-700">지금 문제를 읽고 있어요</p>
-                )}
+                  <div className={`flex w-8 items-center justify-center text-white ${playCount >= 2 && !isSpeaking ? "bg-gray-300" : "bg-orange-500"}`}>
+                    {playCount > 0 && !isSpeaking ? (
+                      <RotateCcw className="h-3.5 w-3.5" />
+                    ) : (
+                      <Play className="h-3.5 w-3.5 fill-current" />
+                    )}
+                  </div>
+                  <div className="flex flex-1 items-center px-2">
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
+                      <div
+                        className="h-full rounded-full bg-gray-500 transition-[width] ease-linear"
+                        style={{
+                          width: `${isSpeaking ? speechProgress : 0}%`,
+                          transitionDuration: isSpeaking ? `${speechDurationMs}ms` : "0ms",
+                        }}
+                      />
+                    </div>
+                  </div>
+                </button>
                 <p className="mt-1 text-center text-xs text-gray-500">최대 2회 재생</p>
               </div>
 
               <div className="flex flex-col justify-center">
-                <motion.div
-                  key={currentQuestion}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mb-4"
-                >
-                  <span
-                    className={`inline-block rounded-full px-4 py-2 text-sm font-semibold ${
-                      currentQ.type === "Self-Intro"
-                        ? "bg-yellow-100 text-gray-900"
-                        : currentQ.type === "Role Play"
-                          ? "bg-gray-200 text-gray-900"
-                          : currentQ.type === "Follow-up"
-                            ? "bg-gray-300 text-gray-900"
-                            : "bg-yellow-200 text-gray-900"
-                    }`}
-                  >
-                    {questionTypeLabel}
-                  </span>
-                </motion.div>
                 <div className="grid grid-cols-5 gap-2 sm:grid-cols-10 lg:grid-cols-10">
                   {progressSteps.map((step) => {
                     const isCurrent = step === currentQuestion + 1;

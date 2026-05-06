@@ -85,6 +85,16 @@ function BarMetricItem({
   );
 }
 
+function UnavailableBarMetricItem({ label }: { label: string }) {
+  return (
+    <div className="grid min-h-12 grid-cols-[7.5rem_1fr_7rem] items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3">
+      <p className="text-sm font-semibold text-gray-700">{label}</p>
+      <div className="h-2.5 overflow-hidden rounded-full bg-gray-100" />
+      <p className="text-right text-xs font-semibold text-gray-500">녹음 파일 없음</p>
+    </div>
+  );
+}
+
 function formatNumber(value: number | undefined, digits = 0) {
   if (!Number.isFinite(value)) {
     return "-";
@@ -101,7 +111,7 @@ function formatPercent(value: number | undefined) {
   return `${Math.round(value * 100)}%`;
 }
 
-function OpicGradeCard({ opic }: { opic: OpicEvaluation }) {
+function OpicGradeCard({ opic, hasAudio }: { opic: OpicEvaluation; hasAudio: boolean }) {
   const metrics = opic.metricSnapshot || {};
   const grade = opic.grade || "데이터 부족";
   const isHighGrade = grade === "AL" || grade === "IH";
@@ -132,8 +142,8 @@ function OpicGradeCard({ opic }: { opic: OpicEvaluation }) {
           <div className="mb-5 grid grid-cols-3 gap-2 sm:gap-3">
             <MetricItem label="평균 단어 수" value={`${formatNumber(metrics.wordCount)}개`} />
             <MetricItem label="평균 문장 수" value={`${formatNumber(metrics.sentenceCount, 1)}개`} />
-            <MetricItem label="발화 속도" value={`${formatNumber(metrics.speechRateWpm)} wpm`} />
-            <MetricItem label="침묵 비율" value={formatPercent(metrics.silenceRatio)} />
+            <MetricItem label="발화 속도" value={hasAudio ? `${formatNumber(metrics.speechRateWpm)} wpm` : "녹음 파일 없음"} />
+            <MetricItem label="침묵 비율" value={hasAudio ? formatPercent(metrics.silenceRatio) : "녹음 파일 없음"} />
             <MetricItem label="연결어" value={`${formatNumber(metrics.connectorCount, 1)}개`} />
             <MetricItem label="어휘 다양도" value={formatPercent(metrics.lexicalDiversity)} />
             <MetricItem label="반복 비율" value={formatPercent(metrics.repetitionRate)} />
@@ -252,6 +262,7 @@ export function EvaluationResultView({
   const answers = sessionResult?.answers || [];
   const overall = sessionResult?.overall;
   const opicOverall = overall?.opic;
+  const hasAnyAudio = answers.some((answer) => answer.audioDurationSeconds > 0);
   const overallScoreCards = useMemo(() => {
     if (!overall) {
       return [];
@@ -294,7 +305,7 @@ export function EvaluationResultView({
           <>
             {overall && (
               <>
-                {opicOverall && <OpicGradeCard opic={opicOverall} />}
+                {opicOverall && <OpicGradeCard opic={opicOverall} hasAudio={hasAnyAudio} />}
 
                 <div className="mb-8 grid gap-6 md:grid-cols-2">
                   <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}>
@@ -437,10 +448,18 @@ export function EvaluationResultView({
                           <BarMetricItem label="단어 수" value={answer.metrics.wordCount} max={150} suffix="개" />
                           <BarMetricItem label="문장 수" value={answer.metrics.sentenceCount} max={20} suffix="개" />
                           <BarMetricItem label="평균 문장 길이" value={answer.metrics.avgSentenceLength} max={25} suffix="단어" />
-                          <BarMetricItem label="말하기 속도" value={answer.metrics.speechRateWpm} max={180} suffix=" wpm" />
+                          {answer.audioDurationSeconds > 0 ? (
+                            <BarMetricItem label="말하기 속도" value={answer.metrics.speechRateWpm} max={180} suffix=" wpm" />
+                          ) : (
+                            <UnavailableBarMetricItem label="말하기 속도" />
+                          )}
                           <BarMetricItem label="질문 키워드 일치도" value={Math.round(answer.metrics.keywordSimilarity * 100)} max={100} suffix="%" />
                           <BarMetricItem label="어휘 다양성" value={Math.round(answer.metrics.lexicalDiversity * 100)} max={100} suffix="%" />
-                          <BarMetricItem label="침묵 비율" value={Math.round(answer.metrics.silenceRatio * 100)} max={100} suffix="%" />
+                          {answer.audioDurationSeconds > 0 ? (
+                            <BarMetricItem label="침묵 비율" value={Math.round(answer.metrics.silenceRatio * 100)} max={100} suffix="%" />
+                          ) : (
+                            <UnavailableBarMetricItem label="침묵 비율" />
+                          )}
                           <BarMetricItem label="연결어 사용 밀도" value={Number((answer.metrics.connectorRatio ?? 0).toFixed(2))} max={4} suffix="/문장" />
                         </div>
 
@@ -461,9 +480,9 @@ export function EvaluationResultView({
                             <MetricItem label="어휘" value={answer.feedback.feedback.vocabulary} />
                             <MetricItem label="답변 완성도" value={answer.feedback.feedback.completion} />
                             <MetricItem label="질문 적합도" value={answer.feedback.feedback.relevance} />
-                            <MetricItem label="속도" value={answer.feedback.feedback.speed} />
+                            <MetricItem label="속도" value={answer.audioDurationSeconds > 0 ? answer.feedback.feedback.speed : "녹음 파일 없음"} />
                             <MetricItem label="문장 길이" value={answer.feedback.sentenceLength} />
-                            <MetricItem label="답변 시간" value={answer.feedback.answerTime} />
+                            <MetricItem label="답변 시간" value={answer.audioDurationSeconds > 0 ? answer.feedback.answerTime : "녹음 파일 없음"} />
                             <MetricItem label="반복 표현" value={answer.feedback.repetitionRate} />
                             <MetricItem label="키워드 유사도" value={answer.feedback.keywordSimilarity} />
                           </div>

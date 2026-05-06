@@ -1,7 +1,7 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { motion } from "motion/react";
-import { ArrowLeft, HelpCircle, Lightbulb, Mic, Square, Volume2 } from "lucide-react";
+import { ArrowLeft, HelpCircle, Lightbulb, Mic, Play, RotateCcw, Square } from "lucide-react";
 import { useQuestionSpeech } from "../hooks/useQuestionSpeech";
 import { useSpeechToTextRecorder } from "../hooks/useSpeechToTextRecorder";
 import {
@@ -129,7 +129,14 @@ export function PracticeQuestion() {
     questionId: `practice-${visibleQuestions[currentQuestion]?.id ?? currentQuestion + 1}`,
     language: "en",
   });
-  const { isSpeaking, isSupported: isQuestionSpeechSupported, speak, stop } = useQuestionSpeech();
+  const {
+    isSpeaking,
+    progress: speechProgress,
+    durationMs: speechDurationMs,
+    isSupported: isQuestionSpeechSupported,
+    speak,
+    stop,
+  } = useQuestionSpeech();
 
   useEffect(() => {
     let isMounted = true;
@@ -401,23 +408,32 @@ export function PracticeQuestion() {
                 </div>
               </div>
 
-              <Button
-                variant="outline"
-                size="sm"
+              <button
+                type="button"
                 onClick={handlePlayQuestion}
-                disabled={!canPlayQuestion}
-                className={`mx-auto gap-2 transition-all disabled:opacity-40 ${
-                  isSpeaking
-                    ? "border-yellow-500 bg-yellow-400 text-gray-900 shadow-md hover:bg-yellow-400"
-                    : "text-gray-700"
-                }`}
+                disabled={isSpeaking || !canPlayQuestion}
+                className="mx-auto flex h-8 w-full max-w-64 overflow-hidden rounded-md border border-gray-200 bg-white shadow-sm transition disabled:cursor-default disabled:opacity-100"
+                aria-label={playCount > 0 ? "문제 다시 듣기" : "문제 듣기"}
               >
-                <Volume2 className={`h-4 w-4 ${isSpeaking ? "animate-pulse" : ""}`} />
-                문제 듣기
-              </Button>
-              {isSpeaking && (
-                <p className="mt-1 text-center text-xs font-medium text-yellow-700">지금 문제를 읽고 있어요</p>
-              )}
+                <div className={`flex w-8 items-center justify-center text-white ${!canPlayQuestion && !isSpeaking ? "bg-gray-300" : "bg-orange-500"}`}>
+                  {playCount > 0 && !isSpeaking ? (
+                    <RotateCcw className="h-3.5 w-3.5" />
+                  ) : (
+                    <Play className="h-3.5 w-3.5 fill-current" />
+                  )}
+                </div>
+                <div className="flex flex-1 items-center px-2">
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
+                    <div
+                      className="h-full rounded-full bg-gray-500 transition-[width] ease-linear"
+                      style={{
+                        width: `${isSpeaking ? speechProgress : 0}%`,
+                        transitionDuration: isSpeaking ? `${speechDurationMs}ms` : "0ms",
+                      }}
+                    />
+                  </div>
+                </div>
+              </button>
               <p className="mt-1 text-center text-xs text-gray-500">최대 2회 재생</p>
             </div>
 
