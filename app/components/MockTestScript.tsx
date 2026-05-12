@@ -10,13 +10,14 @@ import {
   type EvaluationAnswer,
   type EvaluationSession,
 } from "../lib/evaluationApi";
+import { type MockTestQuestionItem } from "../lib/mockTestApi";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
-import { mockTestQuestions } from "./mockTestQuestions";
 
 type MockTestScriptState = {
   sessionId?: number;
   questionCount?: number;
+  mockTestQuestions?: MockTestQuestionItem[];
   questionResults?: EvaluationAnswer[];
   difficulty?: string;
   currentStatus?: string;
@@ -34,7 +35,8 @@ export function MockTestScript() {
   const query = new URLSearchParams(location.search);
   const {
     sessionId: stateSessionId,
-    questionCount = mockTestQuestions.length,
+    questionCount = 0,
+    mockTestQuestions = [],
     questionResults: initialQuestionResults = [],
     difficulty = "",
     currentStatus = "",
@@ -57,7 +59,21 @@ export function MockTestScript() {
   const [isLoading, setIsLoading] = useState(initialQuestionResults.length === 0);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
 
-  const visibleQuestions = useMemo(() => mockTestQuestions.slice(0, questionCount), [questionCount]);
+  const visibleQuestions = useMemo(() => {
+    if (mockTestQuestions.length > 0) {
+      return mockTestQuestions.slice(0, questionCount || mockTestQuestions.length);
+    }
+
+    return questionResults.map((answer, index) => ({
+      id: index + 1,
+      questionOrder: answer.questionOrder,
+      questionType: answer.questionType || "mock_test",
+      questionText: answer.questionText,
+      translation: "",
+      hint: "",
+      category: answer.questionType || "mock_test",
+    }));
+  }, [mockTestQuestions, questionCount, questionResults]);
 
   useEffect(() => {
     let isMounted = true;
@@ -148,6 +164,7 @@ export function MockTestScript() {
             sessionId,
             sessionResult,
             questionCount,
+            mockTestQuestions,
             difficulty,
             currentStatus,
             studentStatus,
@@ -183,6 +200,7 @@ export function MockTestScript() {
         selectedExercises,
         selectedTravel,
         sessionId,
+        mockTestQuestions,
       },
     });
   };
@@ -229,10 +247,10 @@ export function MockTestScript() {
                   const isEditing = editingIndex === index;
 
                   return (
-                    <Card key={question.id} className="border border-gray-200 bg-white p-5">
+                    <Card key={`${question.id}-${index}`} className="border border-gray-200 bg-white p-5">
                       <div className="mb-4 flex items-start justify-between gap-4">
                         <h2 className="text-base font-semibold text-gray-900 sm:text-lg">
-                          Q{index + 1}. {answer?.questionText || question.text}
+                          Q{index + 1}. {answer?.questionText || question.questionText}
                         </h2>
                         {answer?.audioUrl ? (
                           <audio controls preload="none" src={answer.audioUrl} className="max-w-[260px]" />

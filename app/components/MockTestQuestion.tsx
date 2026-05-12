@@ -10,11 +10,11 @@ import {
   type EvaluationAnswer,
   type EvaluationQuestionPayload,
 } from "../lib/evaluationApi";
+import { createMockTestSession, type MockTestQuestionItem } from "../lib/mockTestApi";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Progress } from "./ui/progress";
 import ossCharacter from "./OSS_character.png";
-import { mockTestQuestions } from "./mockTestQuestions";
 
 type TransitionPhase = "saving" | "preparing" | null;
 type TransitionAction = "next" | "script" | null;
@@ -31,6 +31,7 @@ type MockTestQuestionState = {
   currentQuestion?: number;
   questionResults?: EvaluationAnswer[];
   sessionId?: number;
+  mockTestQuestions?: MockTestQuestionItem[];
 };
 
 export function MockTestQuestion() {
@@ -50,11 +51,11 @@ export function MockTestQuestion() {
     currentQuestion: initialCurrentQuestion = 0,
     questionResults: initialQuestionResults = [] as EvaluationAnswer[],
     sessionId: initialSessionId,
+    mockTestQuestions: initialMockTestQuestions = [] as MockTestQuestionItem[],
   } = (location.state as MockTestQuestionState) ?? {};
 
-  const [currentQuestion, setCurrentQuestion] = useState(() =>
-    Math.min(initialCurrentQuestion, mockTestQuestions.length - 1),
-  );
+  const [mockTestQuestions, setMockTestQuestions] = useState<MockTestQuestionItem[]>(initialMockTestQuestions);
+  const [currentQuestion, setCurrentQuestion] = useState(initialCurrentQuestion);
   const [totalTime, setTotalTime] = useState(2400);
   const [recordingTime, setRecordingTime] = useState(recordingLimit);
   const [playCount, setPlayCount] = useState(0);
@@ -69,6 +70,9 @@ export function MockTestQuestion() {
   const [questionSpeechError, setQuestionSpeechError] = useState("");
   const [questionResults, setQuestionResults] = useState<EvaluationAnswer[]>(initialQuestionResults);
 
+  const questionCount = mockTestQuestions.length;
+  const currentQ = mockTestQuestions[currentQuestion];
+
   const {
     error,
     isRecording,
@@ -78,7 +82,7 @@ export function MockTestQuestion() {
     startRecording,
     stopRecording,
   } = useSpeechToTextRecorder({
-    questionId: `mock-test-${mockTestQuestions[currentQuestion].id}`,
+    questionId: `mock-test-${currentQ?.id ?? currentQuestion + 1}`,
     language: "en",
   });
   const {
@@ -93,28 +97,42 @@ export function MockTestQuestion() {
   useEffect(() => {
     let isMounted = true;
 
-    if (sessionId) {
+    if (sessionId || initialMockTestQuestions.length > 0) {
       return undefined;
     }
-
-    const payloadQuestions: EvaluationQuestionPayload[] = mockTestQuestions.map((question, index) => ({
-      questionId: `mock-test-${question.id}`,
-      questionOrder: index + 1,
-      questionText: question.text,
-      questionType: question.type,
-      translation: question.translation,
-      category: question.type,
-    }));
 
     const run = async () => {
       try {
         setIsPreparingSession(true);
         setSessionError("");
+
+        const mockSession = await createMockTestSession({
+          difficulty,
+          currentStatus,
+          studentStatus,
+          livingSituation,
+          selectedLeisure,
+          selectedHobbies,
+          selectedExercises,
+          selectedTravel,
+        });
+
+        const payloadQuestions: EvaluationQuestionPayload[] = mockSession.questions.map((question) => ({
+          questionId: `mock-test-${question.id}`,
+          questionOrder: question.questionOrder,
+          questionText: question.questionText,
+          questionType: question.questionType,
+          translation: question.translation,
+          hint: question.hint,
+          category: question.category || question.questionType,
+        }));
+
         const session = await createEvaluationSession({
           mode: "mock_test",
           title: "Mock Test Session",
           difficulty: difficulty || undefined,
           metadata: {
+            mockTestSessionId: mockSession.sessionId,
             difficulty,
             currentStatus,
             studentStatus,
@@ -131,6 +149,8 @@ export function MockTestQuestion() {
           return;
         }
 
+        setMockTestQuestions(mockSession.questions);
+        setCurrentQuestion(Math.min(initialCurrentQuestion, Math.max(mockSession.questions.length - 1, 0)));
         setSessionId(session.id);
         setQuestionResults(session.answers);
       } catch (sessionCreateError) {
@@ -157,6 +177,8 @@ export function MockTestQuestion() {
   }, [
     currentStatus,
     difficulty,
+    initialCurrentQuestion,
+    initialMockTestQuestions.length,
     livingSituation,
     selectedExercises,
     selectedHobbies,
@@ -203,7 +225,7 @@ export function MockTestQuestion() {
     return `+${formatTime(Math.abs(seconds))}`;
   };
 
-  const totalProgress = ((currentQuestion + 1) / mockTestQuestions.length) * 100;
+  const totalProgress = questionCount > 0 ? ((currentQuestion + 1) / questionCount) * 100 : 0;
   const recordingProgress = Math.min(
     ((recordingLimit - Math.max(recordingTime, 0)) / recordingLimit) * 100,
     100,
@@ -213,31 +235,14 @@ export function MockTestQuestion() {
     100,
   );
   const isOvertime = recordingTime < 0;
-  const progressSteps = Array.from({ length: mockTestQuestions.length }, (_, index) => index + 1);
-  const currentQ = mockTestQuestions[currentQuestion];
+  const progressSteps = Array.from({ length: questionCount }, (_, index) => index + 1);
   const currentSavedResult = questionResults[currentQuestion];
   const isBusy = isUploading || isEvaluating || isPreparingSession;
 
   const difficultyLabel = difficulty === "3-4" ? "레벨 3-4" : difficulty === "5-6" ? "레벨 5-6" : "";
-  const statusLabel = {
-    company: "회사원",
-    remote: "재택근무",
-    teacher: "교사",
-    unemployed: "일 경험 없음",
-  }[currentStatus] || "";
-  const studentLabel = {
-    student: "학생",
-    graduated: "졸업 후 5년 지남",
-  }[studentStatus] || "";
-  const livingSituationLabel = {
-    alone: "1인 거주",
-    family: "가족과 함께",
-    dorm: "기숙사",
-    friends: "친구와 함께",
-    military: "군대",
-  }[livingSituation] || "";
+
   const handlePlayQuestion = () => {
-    if (playCount >= 2 || !currentQ.text) {
+    if (playCount >= 2 || !currentQ?.questionText) {
       return;
     }
 
@@ -246,7 +251,7 @@ export function MockTestQuestion() {
       return;
     }
 
-    const didSpeak = speak(currentQ.text);
+    const didSpeak = speak(currentQ.questionText);
     if (!didSpeak) {
       setQuestionSpeechError("문제를 음성으로 읽지 못했습니다.");
       return;
@@ -270,11 +275,11 @@ export function MockTestQuestion() {
   };
 
   const handleNext = async () => {
-    if (transitionPhase || isBusy || !sessionId) {
+    if (transitionPhase || isBusy || !sessionId || !currentQ) {
       return;
     }
 
-    const nextAction: TransitionAction = currentQuestion < mockTestQuestions.length - 1 ? "next" : "script";
+    const nextAction: TransitionAction = currentQuestion < questionCount - 1 ? "next" : "script";
 
     try {
       setTransitionMessage(
@@ -291,14 +296,14 @@ export function MockTestQuestion() {
         mode: "mock_test",
         questionId: `mock-test-${currentQ.id}`,
         questionOrder: currentQuestion + 1,
-        questionText: currentQ.text,
-        questionType: currentQ.type,
+        questionText: currentQ.questionText,
+        questionType: currentQ.questionType,
         clientDurationSeconds: recording?.durationSeconds || 0,
         audioBlob: recording?.audioBlob || null,
         fileName: recording?.fileName,
       });
 
-      const nextResults = Array.from({ length: mockTestQuestions.length }, (_, index) => questionResults[index] || null);
+      const nextResults = Array.from({ length: questionCount }, (_, index) => questionResults[index] || null);
       nextResults[currentQuestion] = evaluation;
       setQuestionResults(nextResults.filter(Boolean) as EvaluationAnswer[]);
 
@@ -319,7 +324,8 @@ export function MockTestQuestion() {
         navigate(`/mocktest/script?sessionId=${sessionId}`, {
           state: {
             sessionId,
-            questionCount: mockTestQuestions.length,
+            questionCount,
+            mockTestQuestions,
             questionResults: nextResults.filter(Boolean),
             difficulty,
             currentStatus,
@@ -354,7 +360,7 @@ export function MockTestQuestion() {
               variant="ghost"
               size="icon"
               onClick={() => {
-                if (window.confirm("모의고사를 나가시겠습니까? 지금까지 진행한 내용은 저장되지 않습니다.")) {
+                if (window.confirm("모의고사를 나가시겠습니까? 지금까지 진행한 내용은 저장되지 않을 수 있습니다.")) {
                   navigate("/mocktest/setup");
                 }
               }}
@@ -365,7 +371,7 @@ export function MockTestQuestion() {
               <div className="text-center">
                 <p className="text-xs text-gray-500">문항</p>
                 <p className="text-sm font-bold text-gray-900">
-                  {currentQuestion + 1} / {mockTestQuestions.length}
+                  {questionCount > 0 ? currentQuestion + 1 : 0} / {questionCount}
                 </p>
               </div>
               <div className="text-center">
@@ -402,18 +408,14 @@ export function MockTestQuestion() {
               <div className="flex flex-col items-center">
                 <div className="mb-4 w-full max-w-[360px] rounded-[32px] border border-yellow-200 bg-white p-2 shadow-sm">
                   <div className="flex h-[300px] w-full items-center justify-center overflow-hidden rounded-[28px] bg-white">
-                    <img
-                      src={ossCharacter}
-                      alt="질문 캐릭터"
-                      className="h-full w-full object-contain"
-                    />
+                    <img src={ossCharacter} alt="질문 캐릭터" className="h-full w-full object-contain" />
                   </div>
                 </div>
 
                 <button
                   type="button"
                   onClick={handlePlayQuestion}
-                  disabled={isSpeaking || playCount >= 2}
+                  disabled={isSpeaking || playCount >= 2 || !currentQ}
                   className="flex h-8 w-full max-w-64 overflow-hidden rounded-md border border-gray-200 bg-white shadow-sm transition disabled:cursor-default disabled:opacity-100"
                   aria-label={playCount > 0 ? "문제 다시 듣기" : "문제 듣기"}
                 >
@@ -463,7 +465,7 @@ export function MockTestQuestion() {
                     className="mt-6 flex w-full flex-col items-center gap-3"
                   >
                     <p className="text-center text-lg font-medium leading-relaxed text-gray-900">
-                      {currentQ.text}
+                      {currentQ?.questionText || "문제를 불러오는 중입니다."}
                     </p>
 
                     {!showTranslation && (
@@ -485,7 +487,7 @@ export function MockTestQuestion() {
                         animate={{ opacity: 1, y: 0 }}
                         className="max-w-[36rem] text-center text-sm font-medium leading-relaxed text-gray-700"
                       >
-                        {currentQ.translation}
+                        {currentQ?.translation || "해석이 등록되지 않은 문제입니다."}
                       </motion.p>
                     )}
                   </motion.div>
@@ -495,6 +497,7 @@ export function MockTestQuestion() {
                       type="button"
                       variant="outline"
                       size="lg"
+                      disabled={!currentQ}
                       onClick={() => {
                         setShowQuestion(true);
                         setShowTranslation(false);
@@ -515,7 +518,7 @@ export function MockTestQuestion() {
             <Button
               size="lg"
               onClick={handleRecordingToggle}
-              disabled={isBusy || !sessionId}
+              disabled={isBusy || !sessionId || !currentQ}
               className="gap-2 bg-red-500 text-white hover:bg-red-600 disabled:opacity-70"
             >
               {isRecording ? <Square className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
@@ -524,7 +527,7 @@ export function MockTestQuestion() {
           </div>
 
           {isPreparingSession && (
-            <p className="mb-4 text-center text-sm text-gray-500">모의고사 세션 준비 중...</p>
+            <p className="mb-4 text-center text-sm text-gray-500">선택 정보를 바탕으로 모의고사 문제를 준비 중입니다...</p>
           )}
 
           {isEvaluating && (
@@ -537,7 +540,7 @@ export function MockTestQuestion() {
 
           {currentSavedResult?.usedTranscript && (
             <div className="mb-4 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
-              방금 저장된 스크립트: {currentSavedResult.usedTranscript}
+              방금 저장한 스크립트: {currentSavedResult.usedTranscript}
             </div>
           )}
 
@@ -566,10 +569,10 @@ export function MockTestQuestion() {
         <Button
           size="lg"
           onClick={handleNext}
-          disabled={isBusy || !sessionId}
+          disabled={isBusy || !sessionId || !currentQ}
           className="w-full bg-yellow-400 text-gray-900 hover:bg-yellow-500 disabled:opacity-70"
         >
-          {currentQuestion < mockTestQuestions.length - 1 ? "다음 문제" : "시험 종료"}
+          {currentQuestion < questionCount - 1 ? "다음 문제" : "시험 종료"}
         </Button>
       </div>
 
@@ -586,7 +589,7 @@ export function MockTestQuestion() {
               </div>
             </div>
             <p className="text-center text-2xl font-bold text-gray-900">{transitionMessage}</p>
-            <p className="mt-3 text-center text-sm text-gray-600">잠시만 기다려주세요.</p>
+            <p className="mt-3 text-center text-sm text-gray-600">잠시만 기다려 주세요.</p>
           </motion.div>
         </div>
       )}
