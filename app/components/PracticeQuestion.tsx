@@ -1,7 +1,7 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { motion } from "motion/react";
-import { ArrowLeft, HelpCircle, Lightbulb, Mic, Play, RotateCcw, Square } from "lucide-react";
+import { ArrowLeft, ChevronUp, HelpCircle, Lightbulb, Mic, Play, RotateCcw, Square } from "lucide-react";
 import { useQuestionSpeech } from "../hooks/useQuestionSpeech";
 import { useSpeechToTextRecorder } from "../hooks/useSpeechToTextRecorder";
 import {
@@ -439,7 +439,26 @@ export function PracticeQuestion() {
 
             <div className="flex flex-col justify-start">
               <div className="mb-4 grid gap-3 sm:gap-3">
-                <div className="flex min-h-[150px] w-full items-center justify-center rounded-md border border-yellow-100 bg-yellow-50 px-2 py-3 text-center shadow-md transition hover:bg-yellow-100 hover:shadow-lg sm:min-h-[180px] sm:rounded-xl sm:px-4">
+                <div
+                  role={!showQuestion ? "button" : undefined}
+                  tabIndex={!showQuestion ? 0 : undefined}
+                  onClick={() => {
+                    if (!showQuestion) {
+                      setShowQuestion(true);
+                      setShowTranslation(false);
+                    }
+                  }}
+                  onKeyDown={(event) => {
+                    if (!showQuestion && (event.key === "Enter" || event.key === " ")) {
+                      event.preventDefault();
+                      setShowQuestion(true);
+                      setShowTranslation(false);
+                    }
+                  }}
+                  className={`flex min-h-[150px] w-full items-center justify-center rounded-md border border-yellow-100 bg-yellow-50 px-2 py-3 text-center shadow-md transition hover:bg-yellow-100 hover:shadow-lg sm:min-h-[180px] sm:rounded-xl sm:px-4 ${
+                    !showQuestion ? "cursor-pointer" : ""
+                  }`}
+                >
                   {showQuestion ? (
                     <motion.div
                       key={`question-${currentQuestion}`}
@@ -457,7 +476,7 @@ export function PracticeQuestion() {
                           variant="outline"
                           size="sm"
                           onClick={() => setShowTranslation(true)}
-                          className="gap-2 border-yellow-300 bg-white text-yellow-900 hover:bg-yellow-100"
+                          className="gap-2 border-yellow-300 bg-transparent text-yellow-900 hover:bg-yellow-100"
                         >
                           <HelpCircle className="h-4 w-4 shrink-0" />
                           해석 보기
@@ -474,31 +493,54 @@ export function PracticeQuestion() {
                           {currentQuestionItem?.translation}
                         </motion.p>
                       )}
+
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setShowQuestion(false);
+                          setShowTranslation(false);
+                        }}
+                        className="h-7 rounded-full border border-yellow-300 bg-white px-2.5 text-xs text-yellow-900 shadow-sm hover:bg-yellow-100"
+                        aria-label="문제 닫기"
+                      >
+                        <ChevronUp className="h-4 w-4" />
+                        닫기
+                      </Button>
                     </motion.div>
                   ) : (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowQuestion(true);
-                        setShowTranslation(false);
-                      }}
-                      className="inline-flex items-center gap-2 text-base font-semibold text-yellow-900 sm:text-2xl"
-                    >
+                    <span className="inline-flex items-center gap-2 text-base font-semibold text-yellow-900 sm:text-2xl">
                       <HelpCircle className="h-4 w-4 shrink-0" />
                       문제 보기
-                    </button>
+                    </span>
                   )}
                 </div>
 
-                <button type="button" onClick={() => setShowHint((prev) => !prev)} className="w-full">
-                  <div className="flex min-h-[92px] w-full items-center justify-center rounded-md border border-sky-100 bg-sky-50 px-3 py-4 text-center shadow-md transition hover:bg-sky-100 hover:shadow-lg sm:min-h-[110px] sm:rounded-xl sm:px-4">
-                    {showHint ? (
-                      <motion.div
-                        key={`hint-${currentQuestion}`}
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="grid w-full grid-cols-2 gap-1.5 text-left sm:gap-2"
-                      >
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => {
+                    if (!showHint) {
+                      setShowHint(true);
+                    }
+                  }}
+                  onKeyDown={(event) => {
+                    if (!showHint && (event.key === "Enter" || event.key === " ")) {
+                      event.preventDefault();
+                      setShowHint(true);
+                    }
+                  }}
+                  className="flex min-h-[92px] w-full cursor-pointer items-center justify-center rounded-md border border-sky-100 bg-sky-50 px-3 py-4 text-center shadow-md transition hover:bg-sky-100 hover:shadow-lg sm:min-h-[110px] sm:rounded-xl sm:px-4"
+                >
+                  {showHint ? (
+                    <motion.div
+                      key={`hint-${currentQuestion}`}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex w-full flex-col items-center gap-3"
+                    >
+                      <div className="grid w-full grid-cols-2 gap-1.5 text-left sm:gap-2">
                         {hintWords.map((item) => (
                           <div
                             key={`${item.word}-${item.meaning}`}
@@ -512,15 +554,30 @@ export function PracticeQuestion() {
                             </span>
                           </div>
                         ))}
-                      </motion.div>
-                    ) : (
-                      <span className="inline-flex items-center gap-2 text-base font-semibold text-sky-900 sm:text-2xl">
-                        <Lightbulb className="h-4 w-4 shrink-0" />
-                        단어 힌트
-                      </span>
-                    )}
-                  </div>
-                </button>
+                      </div>
+
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setShowHint(false);
+                        }}
+                        className="h-7 rounded-full border border-sky-300 bg-white px-2.5 text-xs text-sky-900 shadow-sm hover:bg-sky-100"
+                        aria-label="힌트 닫기"
+                      >
+                        <ChevronUp className="h-4 w-4" />
+                        닫기
+                      </Button>
+                    </motion.div>
+                  ) : (
+                    <span className="inline-flex items-center gap-2 text-base font-semibold text-sky-900 sm:text-2xl">
+                      <Lightbulb className="h-4 w-4 shrink-0" />
+                      단어 힌트
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
