@@ -107,6 +107,7 @@ export function PracticeQuestion() {
   const [isPreparingSession, setIsPreparingSession] = useState(false);
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [questionSpeechError, setQuestionSpeechError] = useState("");
+  const [interactionNotice, setInteractionNotice] = useState("");
   const [questionResults, setQuestionResults] = useState<EvaluationAnswer[]>(() => {
     const base = Array.from({ length: questionLimit }, () => null) as Array<EvaluationAnswer | null>;
     initialQuestionResults.forEach((item, index) => {
@@ -209,8 +210,18 @@ export function PracticeQuestion() {
 
   useEffect(() => {
     setQuestionSpeechError("");
+    setInteractionNotice("");
     stop();
   }, [currentQuestion, stop]);
+
+  useEffect(() => {
+    if (!interactionNotice) {
+      return undefined;
+    }
+
+    const timer = window.setTimeout(() => setInteractionNotice(""), 2600);
+    return () => window.clearTimeout(timer);
+  }, [interactionNotice]);
 
   const displayTypeText = useMemo(() => {
     if (!selectedTypeLabel) {
@@ -253,9 +264,16 @@ export function PracticeQuestion() {
   );
   const isOvertime = timeLeft < 0;
   const canPlayQuestion = playCount < 2;
+  const isPlayBlockedByRecording = isRecording;
+  const isRecordBlockedBySpeaking = isSpeaking;
 
   const handlePlayQuestion = () => {
     if (!canPlayQuestion || !currentQuestionItem?.text) {
+      return;
+    }
+
+    if (isPlayBlockedByRecording) {
+      setInteractionNotice("녹음 중에는 문제 듣기를 함께 실행할 수 없어요. 먼저 녹음을 종료해 주세요.");
       return;
     }
 
@@ -276,6 +294,11 @@ export function PracticeQuestion() {
 
   const handleRecordingToggle = async () => {
     if (isBusy) {
+      return;
+    }
+
+    if (!isRecording && isRecordBlockedBySpeaking) {
+      setInteractionNotice("문제 듣기 중에는 녹음을 함께 실행할 수 없어요. 문제 듣기가 끝난 뒤 다시 시도해 주세요.");
       return;
     }
 
@@ -411,8 +434,11 @@ export function PracticeQuestion() {
               <button
                 type="button"
                 onClick={handlePlayQuestion}
-                disabled={isSpeaking || !canPlayQuestion}
-                className="mx-auto flex h-8 w-full max-w-64 overflow-hidden rounded-md border border-gray-200 bg-white shadow-sm transition disabled:cursor-default disabled:opacity-100"
+                disabled={!canPlayQuestion}
+                aria-disabled={isPlayBlockedByRecording}
+                className={`mx-auto flex h-8 w-full max-w-64 overflow-hidden rounded-md border border-gray-200 bg-white shadow-sm transition disabled:cursor-default disabled:opacity-100 ${
+                  isPlayBlockedByRecording ? "cursor-not-allowed opacity-70" : ""
+                }`}
                 aria-label={playCount > 0 ? "문제 다시 듣기" : "문제 듣기"}
               >
                 <div className={`flex w-8 items-center justify-center text-white ${!canPlayQuestion && !isSpeaking ? "bg-gray-300" : "bg-orange-500"}`}>
@@ -593,7 +619,10 @@ export function PracticeQuestion() {
               size="lg"
               onClick={handleRecordingToggle}
               disabled={isBusy || !sessionId}
-              className="gap-2 bg-red-500 text-white hover:bg-red-600 disabled:opacity-70"
+              aria-disabled={isRecordBlockedBySpeaking}
+              className={`gap-2 bg-red-500 text-white hover:bg-red-600 disabled:opacity-70 ${
+                isRecordBlockedBySpeaking ? "cursor-not-allowed opacity-70" : ""
+              }`}
             >
               {isRecording ? <Square className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
               {isRecording ? "녹음 종료" : "녹음 시작"}
@@ -605,6 +634,11 @@ export function PracticeQuestion() {
           {error && <p className="mb-4 text-center text-sm text-red-500">{error}</p>}
           {sessionError && <p className="mb-4 text-center text-sm text-red-500">{sessionError}</p>}
           {questionSpeechError && <p className="mb-4 text-center text-sm text-red-500">{questionSpeechError}</p>}
+          {interactionNotice && (
+            <p className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-center text-sm text-amber-800">
+              {interactionNotice}
+            </p>
+          )}
 
           {currentSavedResult?.usedTranscript && (
             <div className="mb-4 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
