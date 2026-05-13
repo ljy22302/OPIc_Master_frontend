@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
 import {
+  BarChart3,
   Bookmark,
   BookOpen,
   CheckCircle2,
@@ -16,6 +17,7 @@ import {
   type EvaluationSession,
   type OpicEvaluation,
 } from "../lib/evaluationApi";
+import { saveScoreRecordFromSession } from "../lib/scoreRecords";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 
@@ -236,6 +238,12 @@ export function EvaluationResultView({
       isMounted = false;
     };
   }, [initialSessionResult, sessionId]);
+
+  useEffect(() => {
+    if (sessionResult?.overall?.opic) {
+      saveScoreRecordFromSession(sessionResult);
+    }
+  }, [sessionResult]);
 
   const toggleAnswer = (index: number) => {
     setExpandedAnswers((current) =>
@@ -504,7 +512,7 @@ export function EvaluationResultView({
           </>
         )}
 
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} className="grid gap-4 md:grid-cols-3">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} className="grid gap-4 md:grid-cols-4">
           <Button variant="outline" onClick={() => onNavigate(restartPath)} className="gap-2">
             <RotateCcw className="h-4 w-4" />
             다시 하기
@@ -512,6 +520,10 @@ export function EvaluationResultView({
           <Button variant="outline" onClick={() => onNavigate("/resources")} className="gap-2">
             <BookOpen className="h-4 w-4" />
             학습 자료 보기
+          </Button>
+          <Button variant="outline" onClick={() => onNavigate("/records")} className="gap-2">
+            <BarChart3 className="h-4 w-4" />
+            점수 기록 보기
           </Button>
           <Button onClick={() => onNavigate("/main")} className="gap-2 bg-yellow-400 text-gray-900 hover:bg-yellow-500">
             <Home className="h-4 w-4" />

@@ -1,468 +1,269 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "motion/react";
-import { ArrowLeft, ArrowUp, TrendingUp, Calendar, Award, Target, Clock, BarChart3 } from "lucide-react";
+import { ArrowLeft, BarChart3, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
-import { Progress } from "./ui/progress";
+import { deleteScoreRecord, getScoreRecords, type ScoreRecord } from "../lib/scoreRecords";
 
-const statistics = {
-  totalPractices: 24,
-  totalMockTests: 5,
-  totalTime: "12시간 35분",
-  currentStreak: 7,
-  targetGrade: "AL (Advanced Low)",
-  bestGrade: "IH (Intermediate High)",
-  averageGrade: "IM3 (Intermediate Mid)",
-  improvement: "+15%",
-  gradePrediction: "평소와 같이 시험 본다면 IH가 나올 확률이 40%입니다.",
+type RecordMode = "practice" | "mock_test";
+
+const gradeOrder = ["NL", "NM", "NH", "IL", "IM1", "IM2", "IM3", "IH", "AL"];
+const modeLabels: Record<RecordMode, string> = {
+  practice: "연습 모드",
+  mock_test: "모의고사 모드",
 };
 
-const recentHistory = [
-  {
-    id: 1,
-    type: "모의고사",
-    date: "2026-04-10",
-    grade: "AL",
-    score: 82,
-    time: "38분",
-  },
-  {
-    id: 2,
-    type: "연습",
-    date: "2026-04-09",
-    grade: "IH",
-    score: 75,
-    time: "12분",
-  },
-  {
-    id: 3,
-    type: "연습",
-    date: "2026-04-08",
-    grade: "IH",
-    score: 72,
-    time: "15분",
-  },
-  {
-    id: 4,
-    type: "모의고사",
-    date: "2026-04-07",
-    grade: "IM",
-    score: 68,
-    time: "40분",
-  },
-  {
-    id: 5,
-    type: "연습",
-    date: "2026-04-06",
-    grade: "IM",
-    score: 65,
-    time: "10분",
-  },
-];
+const detailMetricLabels = [
+  { key: "wordCount", label: "평균 단어 수", suffix: "개", max: 160 },
+  { key: "sentenceCount", label: "평균 문장 수", suffix: "개", max: 20 },
+  { key: "speechRateWpm", label: "발화 속도", suffix: " wpm", max: 180 },
+  { key: "silenceRatio", label: "침묵 비율", suffix: "%", max: 100, percent: true },
+  { key: "connectorCount", label: "연결어", suffix: "개", max: 12 },
+  { key: "lexicalDiversity", label: "어휘 다양도", suffix: "%", max: 100, percent: true },
+  { key: "repetitionRate", label: "반복 비율", suffix: "%", max: 100, percent: true },
+  { key: "keywordSimilarity", label: "주제 일치도", suffix: "%", max: 100, percent: true },
+] as const;
 
-const skillProgress = [
-  { skill: "어휘력", current: 85, target: 90 },
-  { skill: "문법", current: 78, target: 85 },
-  { skill: "유창성", current: 84, target: 90 },
-  { skill: "발음", current: 81, target: 88 },
-];
-
-const monthLabels = (monthNumber: number) => `${monthNumber}월`;
-
-const getDaysInMonth = (year: number, month: number) => new Date(year, month, 0).getDate();
-
-const getMonthStartsOn = (year: number, month: number) => new Date(year, month - 1, 1).getDay();
-
-type CalendarCell = { day: number; count: number } | null;
-
-type MonthlyActivity = {
-  totalPractices: number;
-  totalMockTests: number;
-  totalTime: string;
-  weekCounts: number[];
-  dayOverrides?: Record<number, number>;
+const scoreMetricLabels: Record<string, string> = {
+  grammar: "문법",
+  fluency: "유창성",
+  vocabulary: "어휘",
+  completion: "답변 완성도",
+  relevance: "질문 적합도",
+  speed: "속도",
+  engagement: "호응 유도",
 };
 
-const getCountsByDay = (weekCounts: number[], dayCount: number) =>
-  Array.from({ length: dayCount }, (_, index) =>
-    (() => {
-      const weekCount = weekCounts[Math.min(Math.floor(index / 7), weekCounts.length - 1)] ?? 0;
-      const dayIndexInWeek = index % 7;
-      return dayIndexInWeek < weekCount ? 1 : 0;
-    })()
+function formatDate(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleDateString("ko-KR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+}
+
+function metricValue(value: number | undefined, percent = false) {
+  if (!Number.isFinite(value)) {
+    return null;
+  }
+
+  const adjusted = percent ? (value as number) * 100 : (value as number);
+  return Number.isInteger(adjusted) ? adjusted : Number(adjusted.toFixed(1));
+}
+
+function GradeBars({ record }: { record: ScoreRecord }) {
+  const currentIndex = gradeOrder.indexOf(record.grade);
+  const scorePercent = Math.max(0, Math.min(record.score100, 100));
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-end gap-1.5 sm:gap-2">
+        {gradeOrder.map((grade, index) => {
+          const isCurrent = index === currentIndex;
+          const fallbackHeight = 22 + index * 6;
+          const scoreHeight = Math.max(18, Math.min(96, scorePercent));
+          const height = isCurrent ? scoreHeight : fallbackHeight;
+
+          return (
+            <div key={grade} className="flex flex-1 flex-col items-center gap-1">
+              <div className="flex h-24 w-full items-end rounded-md bg-gray-100 px-1">
+                <div
+                  className={`w-full rounded-t-md transition-all ${
+                    isCurrent ? "bg-yellow-400" : index < currentIndex ? "bg-gray-300" : "bg-gray-200"
+                  }`}
+                  style={{ height: `${height}%` }}
+                />
+              </div>
+              <span className={`text-[10px] font-semibold sm:text-xs ${isCurrent ? "text-gray-900" : "text-gray-500"}`}>
+                {grade}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="flex items-center justify-between rounded-lg bg-gray-900 px-4 py-3 text-white">
+        <div>
+          <p className="text-xs font-semibold text-yellow-300">예상 OPIc 등급</p>
+          <p className="text-3xl font-black">{record.grade}</p>
+        </div>
+        <p className="text-right text-sm text-gray-300">예측 점수<br /><span className="font-bold text-white">{record.score100}점</span></p>
+      </div>
+    </div>
   );
+}
 
-const getMonthlyTotal = (calendar: CalendarCell[]) =>
-  calendar.reduce((sum, cell) => sum + (cell?.count ?? 0), 0);
+function DetailBar({ label, value, max, suffix }: { label: string; value: number | null; max: number; suffix: string }) {
+  const safeValue = value ?? 0;
+  const percentage = Math.max(0, Math.min((safeValue / max) * 100, 100));
 
-const getCalendarDays = (
-  year: number,
-  month: number,
-  activity: MonthlyActivity
-): CalendarCell[] => {
-  const today = new Date();
-  const isCurrentMonth = year === today.getFullYear() && month === today.getMonth() + 1;
-  const days = getDaysInMonth(year, month);
-  const offset = getMonthStartsOn(year, month);
-  const counts = getCountsByDay(activity.weekCounts, days);
-
-  return Array.from({ length: offset }, () => null as CalendarCell).concat(
-    Array.from({ length: days }, (_, index) => {
-      const day = index + 1;
-      if (isCurrentMonth && day > today.getDate()) {
-        return {
-          day,
-          count: 0,
-        } as CalendarCell;
-      }
-      const overrideCount = monthlyDayOverrides[month]?.[day];
-      if (typeof overrideCount === "number") {
-        return {
-          day,
-          count: overrideCount,
-        } as CalendarCell;
-      }
-      return ({
-        day,
-        count: counts[index],
-      } as CalendarCell);
-    })
+  return (
+    <div className="grid min-h-12 grid-cols-[7rem_1fr_4.75rem] items-center gap-3 rounded-xl border border-gray-200 bg-white px-3 py-2">
+      <p className="text-sm font-semibold text-gray-700">{label}</p>
+      <div className="h-2.5 overflow-hidden rounded-full bg-gray-100">
+        <div className="h-full rounded-full bg-yellow-400" style={{ width: `${percentage}%` }} />
+      </div>
+      <p className="text-right text-sm font-semibold text-gray-900">
+        {value == null ? "-" : `${value}${suffix}`}
+      </p>
+    </div>
   );
-};
+}
 
-const monthlyActivityData: Record<number, { totalPractices: number; totalMockTests: number; totalTime: string; weekCounts: number[] }> = {
-  1: { totalPractices: 12, totalMockTests: 2, totalTime: "9시간 20분", weekCounts: [3, 2, 4, 3] },
-  2: { totalPractices: 10, totalMockTests: 1, totalTime: "8시간 10분", weekCounts: [2, 3, 3, 2] },
-  3: { totalPractices: 14, totalMockTests: 3, totalTime: "11시간 5분", weekCounts: [4, 3, 4, 3] },
-  4: { totalPractices: 18, totalMockTests: 4, totalTime: "13시간 40분", weekCounts: [5, 4, 5, 4] },
-  5: { totalPractices: 16, totalMockTests: 3, totalTime: "12시간 55분", weekCounts: [4, 4, 4, 4] },
-  6: { totalPractices: 15, totalMockTests: 3, totalTime: "12시간 20분", weekCounts: [3, 4, 4, 4] },
-  7: { totalPractices: 17, totalMockTests: 3, totalTime: "13시간 15분", weekCounts: [4, 4, 5, 4] },
-  8: { totalPractices: 16, totalMockTests: 4, totalTime: "12시간 50분", weekCounts: [4, 4, 4, 4] },
-  9: { totalPractices: 14, totalMockTests: 3, totalTime: "11시간 45분", weekCounts: [3, 4, 4, 3] },
-  10: { totalPractices: 15, totalMockTests: 3, totalTime: "12시간 10분", weekCounts: [4, 4, 4, 3] },
-  11: { totalPractices: 13, totalMockTests: 2, totalTime: "10시간 50분", weekCounts: [3, 3, 4, 3] },
-  12: { totalPractices: 14, totalMockTests: 2, totalTime: "11시간 30분", weekCounts: [3, 4, 4, 3] },
-};
+function RecordCard({
+  record,
+  expanded,
+  onToggle,
+  onDelete,
+}: {
+  record: ScoreRecord;
+  expanded: boolean;
+  onToggle: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <Card className="overflow-hidden border-2 border-gray-200 bg-white">
+      <div className="grid gap-0 lg:grid-cols-[1fr_1.25fr]">
+        <div className="bg-yellow-50 p-5">
+          <div className="mb-4 flex items-start justify-between gap-3">
+            <div>
+              <span className="rounded-full bg-yellow-400 px-3 py-1 text-xs font-semibold text-gray-900">
+                {modeLabels[record.mode as RecordMode]}
+              </span>
+              <h3 className="mt-3 text-xl font-bold text-gray-900">{record.title}</h3>
+              <p className="text-sm text-gray-500">{formatDate(record.updatedAt)}</p>
+            </div>
+            <Button variant="ghost" size="icon" onClick={onDelete} aria-label="기록 삭제">
+              <Trash2 className="h-4 w-4 text-gray-500" />
+            </Button>
+          </div>
+          <GradeBars record={record} />
+        </div>
 
-const monthlyDayOverrides: Record<number, Record<number, number>> = {
-  4: { 11: 5, 15: 4 },
-};
+        <div className="p-5">
+          <p className="text-sm font-semibold text-gray-500">판정 근거</p>
+          <p className="mt-1 text-base font-medium text-gray-900">{record.reason}</p>
+          {record.feedback && <p className="mt-2 text-sm leading-6 text-gray-600">{record.feedback}</p>}
+          <p className="mt-3 text-xs text-gray-500">
+            채점 문항 {record.completedQuestions}/{record.totalQuestions}개 기준
+          </p>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onToggle}
+            className="mt-5 gap-2 border-yellow-300 text-gray-900 hover:bg-yellow-50"
+          >
+            {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            상세 정보
+          </Button>
+
+          {expanded && (
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-5 space-y-4">
+              <div className="grid gap-2">
+                {detailMetricLabels.map((item) => {
+                  const value = metricValue(record.metrics[item.key], item.percent);
+                  return <DetailBar key={item.key} label={item.label} value={value} max={item.max} suffix={item.suffix} />;
+                })}
+              </div>
+
+              <div className="grid gap-2 lg:grid-cols-2">
+                {Object.entries(record.categoryScores).map(([key, value]) => (
+                  <DetailBar key={key} label={scoreMetricLabels[key] || key} value={value} max={100} suffix="점" />
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </div>
+      </div>
+    </Card>
+  );
+}
 
 export function Records() {
   const navigate = useNavigate();
-  const now = new Date();
-  const [visibleMonthDate, setVisibleMonthDate] = useState(new Date(now.getFullYear(), now.getMonth(), 1));
-  const visibleMonthNumber = visibleMonthDate.getMonth() + 1;
-  const visibleMonthYear = visibleMonthDate.getFullYear();
-  const visibleMonthData = monthlyActivityData[visibleMonthNumber];
-  const visibleMonthCalendar = getCalendarDays(visibleMonthYear, visibleMonthNumber, visibleMonthData);
-  const visibleMonthTotalPractices = getMonthlyTotal(visibleMonthCalendar);
-  const dayNames = ["일", "월", "화", "수", "목", "금", "토"];
+  const [records, setRecords] = useState(() => getScoreRecords());
+  const [activeMode, setActiveMode] = useState<RecordMode>("practice");
+  const [expandedIds, setExpandedIds] = useState<string[]>([]);
 
-  const handlePrevMonth = () => {
-    setVisibleMonthDate((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+  const visibleRecords = useMemo(
+    () => records.filter((record) => record.mode === activeMode),
+    [activeMode, records],
+  );
+  const practiceCount = records.filter((record) => record.mode === "practice").length;
+  const mockTestCount = records.filter((record) => record.mode === "mock_test").length;
+
+  const toggleRecord = (recordId: string) => {
+    setExpandedIds((current) =>
+      current.includes(recordId) ? current.filter((item) => item !== recordId) : [...current, recordId],
+    );
   };
 
-  const handleNextMonth = () => {
-    setVisibleMonthDate((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+  const handleDelete = (recordId: string) => {
+    deleteScoreRecord(recordId);
+    setRecords(getScoreRecords());
+    setExpandedIds((current) => current.filter((item) => item !== recordId));
   };
 
   return (
-    <div className="min-h-screen p-6 bg-gray-50">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="mx-auto max-w-6xl">
         <div className="mb-8 flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate("/main")}
-          >
-            <ArrowLeft className="w-5 h-5" />
+          <Button variant="ghost" size="icon" onClick={() => navigate("/main")}>
+            <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">학습 기록</h1>
-            <p className="text-gray-600">나의 학습 진행 상황을 확인하세요</p>
+            <h1 className="text-3xl font-bold text-gray-900">점수 기록 확인</h1>
+            <p className="text-gray-600">저장된 평가 결과만 모아 연습과 모의고사를 따로 확인하세요.</p>
           </div>
         </div>
 
-        {/* Overview Stats */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="grid md:grid-cols-4 gap-4 mb-8"
-        >
-          <Card className="p-6 bg-white">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-yellow-400 rounded-lg flex items-center justify-center">
-                <Target className="w-5 h-5 text-gray-900" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">총 연습</p>
-                <p className="text-2xl font-bold text-gray-900">{statistics.totalPractices}</p>
-              </div>
-            </div>
-          </Card>
+        <div className="mb-6 grid grid-cols-2 gap-3 rounded-xl bg-white p-2 shadow-sm">
+          {(["practice", "mock_test"] as RecordMode[]).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => setActiveMode(mode)}
+              className={`rounded-lg px-4 py-3 text-sm font-semibold transition ${
+                activeMode === mode ? "bg-yellow-400 text-gray-900" : "text-gray-600 hover:bg-yellow-50"
+              }`}
+            >
+              {modeLabels[mode]} ({mode === "practice" ? practiceCount : mockTestCount})
+            </button>
+          ))}
+        </div>
 
-          <Card className="p-6 bg-white">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-gray-900 rounded-lg flex items-center justify-center">
-                <BarChart3 className="w-5 h-5 text-yellow-400" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">모의고사</p>
-                <p className="text-2xl font-bold text-gray-900">{statistics.totalMockTests}</p>
-              </div>
+        {visibleRecords.length === 0 ? (
+          <Card className="bg-white p-10 text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-yellow-100">
+              <BarChart3 className="h-7 w-7 text-gray-900" />
             </div>
-          </Card>
-
-          <Card className="p-6 bg-white">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
-                <Calendar className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">연속 학습</p>
-                <p className="text-2xl font-bold text-gray-900">{statistics.currentStreak}일</p>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-6 bg-white">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center">
-                <Clock className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">총 학습 시간</p>
-                <p className="text-lg font-bold text-gray-900">{statistics.totalTime}</p>
-              </div>
-            </div>
-          </Card>
-        </motion.div>
-
-        {/* Grade Overview */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="grid md:grid-cols-3 gap-6 mb-8"
-        >
-          <Card className="p-6 bg-white">
-            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <Target className="w-5 h-5 text-blue-500" />
-              목표 등급
-            </h3>
-            <p className="text-sm text-gray-600">향후 달성하고 싶은 목표 등급</p>
-            <div className="text-center p-6 bg-blue-50 rounded-lg">
-              <p className="text-4xl font-bold text-gray-900 mb-2">
-                {statistics.targetGrade}
-              </p>
-            </div>
-          </Card>
-
-          <Card className="p-6 bg-white">
-            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <Award className="w-5 h-5 text-yellow-500" />
-              최고 등급
-            </h3>
-            <p className="text-sm text-gray-600">지금까지 받은 최고 점수</p>
-            <div className="text-center p-6 bg-yellow-50 rounded-lg">
-              <p className="text-4xl font-bold text-gray-900 mb-2">
-                {statistics.bestGrade}
-              </p>
-            </div>
-          </Card>
-
-          <Card className="p-6 bg-white">
-            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-green-500" />
-              평균 등급
-            </h3>
-            <p className="text-sm text-gray-600">
-                최근 향상도: <span className="font-semibold text-green-600">{statistics.improvement}</span>
+            <h2 className="text-xl font-bold text-gray-900">아직 저장된 점수 기록이 없습니다</h2>
+            <p className="mt-2 text-sm text-gray-600">
+              결과 화면을 확인하면 예상 등급, 점수, 세부 지표가 자동으로 기록됩니다.
             </p>
-            <div className="text-center p-6 bg-green-50 rounded-lg">
-              <p className="text-4xl font-bold text-gray-900 mb-2">
-                {statistics.averageGrade}
-              </p>
-              <p className="text-sm text-gray-600">
-                {statistics.gradePrediction}
-              </p>
-            </div>
           </Card>
-        </motion.div>
-
-        {/* Skill Progress */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="mb-8"
-        >
-          <Card className="p-6 bg-white">
-            <h3 className="text-lg font-bold text-gray-900 mb-6">역량별 진행도</h3>
-            <div className="space-y-6">
-              {skillProgress.map((item, index) => (
-                <div key={index}>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="font-semibold text-gray-900">{item.skill}</span>
-                    <span className="text-sm text-gray-600">
-                      {item.current} / {item.target}
-                    </span>
-                  </div>
-                  <Progress value={(item.current / item.target) * 100} className="h-3" />
-                </div>
-              ))}
-            </div>
-          </Card>
-        </motion.div>
-
-        {/* Monthly Activity */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="mb-8"
-        >
-          <Card className="p-6 bg-white">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
-              <div>
-                <h3 className="text-lg font-bold text-gray-900">월간 학습 활동</h3>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={handlePrevMonth}>
-                  &lt;
-                </Button>
-                <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-700">
-                  {visibleMonthYear} {monthLabels(visibleMonthNumber)}
-                </span>
-                <Button variant="outline" size="sm" onClick={handleNextMonth}>
-                  &gt;
-                </Button>
-              </div>
-            </div>
-            <Card className="border border-gray-100 bg-gray-50 p-3 sm:p-4">
-              <div className="mb-3 flex items-center justify-between gap-3 sm:mb-4 sm:gap-4">
-                <div>
-                  <p className="text-lg font-bold text-gray-900 sm:text-xl">
-                    {visibleMonthTotalPractices}
-                    회 학습
-                  </p>
-                </div>
-                <p className="text-xs text-gray-600 sm:text-sm">{visibleMonthData.totalTime}</p>
-              </div>
-
-              <div className="mb-2 grid grid-cols-7 gap-1 text-center sm:mb-3 sm:gap-2">
-                {dayNames.map((day) => (
-                  <div key={day} className="text-xs font-semibold text-gray-500">
-                    {day}
-                  </div>
-                ))}
-              </div>
-
-              <div className="grid grid-cols-7 gap-1 sm:gap-2">
-                {visibleMonthCalendar.map((cell, cellIndex) => (
-                  <div
-                    key={cellIndex}
-                    className={`min-h-[56px] rounded-xl border p-1.5 text-center text-[10px] sm:min-h-[72px] sm:rounded-2xl sm:p-2 sm:text-xs ${
-                      cell === null
-                        ? "bg-transparent border-transparent"
-                        : cell.count >= 5
-                        ? "bg-yellow-300 text-gray-900"
-                        : cell.count >= 4
-                        ? "bg-yellow-200 text-gray-900"
-                        : cell.count >= 2
-                        ? "bg-yellow-100 text-gray-900"
-                        : cell.count === 1
-                        ? "bg-yellow-50 text-gray-700"
-                        : "bg-white text-gray-700"
-                    }`}
-                  >
-                    {cell ? (
-                      <>
-                        <div className="font-semibold">{cell.day}</div>
-                        {cell.count > 0 && (
-                          <div className="mt-0.5 text-[9px] text-gray-700 sm:mt-1 sm:text-[10px]">
-                            {cell.count}회
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <div className="h-full" />
-                    )}
-                  </div>
-                ))}
-              </div>
-            </Card>
-          </Card>
-        </motion.div>
-
-        {/* Recent History */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-        >
-          <h3 className="text-xl font-bold text-gray-900 mb-4">최근 학습 기록</h3>
-          <div className="space-y-3">
-            {recentHistory.map((item, index) => (
-              <Card
-                key={item.id}
-                className="p-5 hover:shadow-md transition-shadow cursor-pointer bg-white"
-                onClick={() => {
-                  if (item.type === "모의고사") {
-                    navigate("/mocktest/result");
-                  } else {
-                    navigate("/practice/result");
-                  }
-                }}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div
-                      className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                        item.type === "모의고사"
-                          ? "bg-gray-200 text-gray-900"
-                          : "bg-yellow-100 text-gray-900"
-                      }`}
-                    >
-                      {item.type}
-                    </div>
-                    <div>
-                      <p className="font-semibold text-gray-900">
-                        {item.grade} - {item.score}점
-                      </p>
-                      <p className="text-sm text-gray-500">{item.date}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-6">
-                    <div className="text-right">
-                      <p className="text-sm text-gray-500">소요 시간</p>
-                      <p className="font-semibold text-gray-900">{item.time}</p>
-                    </div>
-                    <TrendingUp
-                      className={`w-5 h-5 ${
-                        index === 0 ? "text-green-500" : "text-gray-400"
-                      }`}
-                    />
-                  </div>
-                </div>
-              </Card>
+        ) : (
+          <div className="space-y-5">
+            {visibleRecords.map((record) => (
+              <RecordCard
+                key={record.id}
+                record={record}
+                expanded={expandedIds.includes(record.id)}
+                onToggle={() => toggleRecord(record.id)}
+                onDelete={() => handleDelete(record.id)}
+              />
             ))}
           </div>
-        </motion.div>
+        )}
       </div>
-
-      <button
-        type="button"
-        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-        className="fixed bottom-4 right-4 z-30 inline-flex items-center gap-2 rounded-full border border-yellow-300 bg-white px-4 py-3 text-sm font-semibold text-gray-900 shadow-lg transition hover:bg-yellow-50"
-        aria-label="맨 위로 이동"
-      >
-        <ArrowUp className="h-4 w-4" />
-      </button>
     </div>
   );
 }

@@ -1,7 +1,7 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "motion/react";
-import { BookOpen, ClipboardList, FolderOpen, HelpCircle, Mic2 } from "lucide-react";
+import { BarChart3, BookOpen, ClipboardList, FolderOpen, HelpCircle, Mic2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import {
@@ -30,6 +30,12 @@ const menuItems = [
     description: "필수 문장 & 표현",
     icon: BookOpen,
     path: "/resources",
+  },
+  {
+    title: "점수 기록",
+    description: "연습과 모의고사 결과 확인",
+    icon: BarChart3,
+    path: "/records",
   },
   {
     title: "저장된 문제",
@@ -85,7 +91,11 @@ export function Main() {
               <p className="mt-1">필수 표현과 단어를 함께 학습할 수 있습니다.</p>
             </div>
             <div className="rounded-lg bg-yellow-50 p-4">
-              <p className="font-semibold text-gray-900">4. 저장된 문제</p>
+              <p className="font-semibold text-gray-900">4. 점수 기록</p>
+              <p className="mt-1">연습과 모의고사의 예상 등급, 점수, 세부 지표를 확인할 수 있습니다.</p>
+            </div>
+            <div className="rounded-lg bg-yellow-50 p-4">
+              <p className="font-semibold text-gray-900">5. 저장된 문제</p>
               <p className="mt-1">연습에서 저장한 문제와 답변을 확인할 수 있습니다.</p>
             </div>
           </div>
@@ -131,7 +141,6 @@ export function Main() {
               </motion.div>
             ))}
           </div>
-
         </div>
       </main>
     </div>
