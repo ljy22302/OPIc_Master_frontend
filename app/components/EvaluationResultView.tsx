@@ -130,14 +130,6 @@ function OpicGradeCard({ opic, hasAudio }: { opic: OpicEvaluation; hasAudio: boo
 
         <div className="p-6">
           <div className="mb-5">
-            <p className="text-sm font-semibold text-gray-500">판정 근거</p>
-            <p className="mt-1 text-base font-medium text-gray-900">{opic.gradeReason || opic.summary}</p>
-            <p className="mt-2 text-sm text-gray-600">{opic.mainFeedback}</p>
-            {opic.gradableAnswers != null && opic.totalAnswers != null && (
-              <p className="mt-2 text-xs text-gray-500">
-                채점 가능 답변 {opic.gradableAnswers}/{opic.totalAnswers}개 기준
-              </p>
-            )}
           </div>
 
           <div className="mb-5 grid grid-cols-3 gap-2 sm:gap-3">

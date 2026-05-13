@@ -2,21 +2,37 @@ import { type EvaluationMode, type EvaluationSession, type OpicMetricSnapshot } 
 
 export const scoreRecordsStorageKey = "opicScoreRecords";
 
+const practiceRecordRetentionMs = 30 * 24 * 60 * 60 * 1000;
+
 export type ScoreRecord = {
   id: string;
   sessionId: number;
   mode: EvaluationMode;
   title: string;
   grade: string;
-  reason: string;
-  feedback: string;
   createdAt: string;
   updatedAt: string;
-  completedQuestions: number;
-  totalQuestions: number;
   metrics: OpicMetricSnapshot;
   categoryScores: Record<string, number>;
 };
+
+function isExpiredPracticeRecord(record: ScoreRecord, now = Date.now()) {
+  if (record.mode !== "practice") {
+    return false;
+  }
+
+  const timestamp = new Date(record.updatedAt || record.createdAt).getTime();
+  if (Number.isNaN(timestamp)) {
+    return false;
+  }
+
+  return now - timestamp > practiceRecordRetentionMs;
+}
+
+function pruneExpiredPracticeRecords(records: ScoreRecord[]) {
+  const now = Date.now();
+  return records.filter((record) => !isExpiredPracticeRecord(record, now));
+}
 
 function readRecords(): ScoreRecord[] {
   if (typeof window === "undefined") {
@@ -26,7 +42,11 @@ function readRecords(): ScoreRecord[] {
   try {
     const raw = window.localStorage.getItem(scoreRecordsStorageKey);
     const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return pruneExpiredPracticeRecords(parsed as ScoreRecord[]);
   } catch {
     return [];
   }
@@ -37,11 +57,13 @@ function writeRecords(records: ScoreRecord[]) {
     return;
   }
 
-  window.localStorage.setItem(scoreRecordsStorageKey, JSON.stringify(records));
+  window.localStorage.setItem(scoreRecordsStorageKey, JSON.stringify(pruneExpiredPracticeRecords(records)));
 }
 
 export function getScoreRecords() {
-  return readRecords().sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  const records = readRecords().sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  writeRecords(records);
+  return records;
 }
 
 export function deleteScoreRecord(recordId: string) {
@@ -61,12 +83,8 @@ export function saveScoreRecordFromSession(session: EvaluationSession) {
     mode: session.mode,
     title: session.mode === "mock_test" ? "모의고사 결과" : "연습 결과",
     grade: opic.grade || session.overall.estimatedGrade || "데이터 부족",
-    reason: opic.gradeReason || opic.summary || "판정 근거가 없습니다.",
-    feedback: opic.mainFeedback || session.overall.feedback?.summary || "",
     createdAt: session.createdAt,
     updatedAt: session.updatedAt,
-    completedQuestions: session.completedQuestions,
-    totalQuestions: session.totalQuestions,
     metrics: opic.metricSnapshot || {},
     categoryScores: session.overall.categoryScores || {},
   };

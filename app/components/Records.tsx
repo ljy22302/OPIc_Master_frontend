@@ -35,7 +35,7 @@ const scoreMetricLabels: Record<string, string> = {
   engagement: "호응 유도",
 };
 
-function formatDate(value: string) {
+function formatDate(value: string, includeYear = true) {
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
@@ -43,10 +43,15 @@ function formatDate(value: string) {
   }
 
   return date.toLocaleDateString("ko-KR", {
-    year: "numeric",
+    year: includeYear ? "numeric" : undefined,
     month: "2-digit",
     day: "2-digit",
   });
+}
+
+function getGradeValue(grade: string) {
+  const index = gradeOrder.indexOf(grade);
+  return index >= 0 ? index : 0;
 }
 
 function metricValue(value: number | undefined, percent = false) {
@@ -58,7 +63,111 @@ function metricValue(value: number | undefined, percent = false) {
   return Number.isInteger(adjusted) ? adjusted : Number(adjusted.toFixed(1));
 }
 
-function GradeBars({ record }: { record: ScoreRecord }) {
+function RecentGradeTrend({ records }: { records: ScoreRecord[] }) {
+  const recentRecords = records.slice(0, 5).reverse();
+  const width = 640;
+  const height = 210;
+  const padding = { top: 18, right: 18, bottom: 38, left: 42 };
+  const plotWidth = width - padding.left - padding.right;
+  const plotHeight = height - padding.top - padding.bottom;
+  const values = recentRecords.map((record) => getGradeValue(record.grade));
+  const minValue = values.length > 0 ? Math.min(...values) : 0;
+  const maxValue = values.length > 0 ? Math.max(...values) : gradeOrder.length - 1;
+  const yMin = Math.max(0, minValue - 1);
+  const yMax = Math.min(gradeOrder.length - 1, maxValue + 1);
+  const yRange = Math.max(1, yMax - yMin);
+  const visibleGrades = gradeOrder
+    .map((grade, index) => ({ grade, index }))
+    .filter((item) => item.index >= yMin && item.index <= yMax);
+
+  const points = recentRecords.map((record, index) => {
+    const x = padding.left + (recentRecords.length <= 1 ? plotWidth / 2 : (index / (recentRecords.length - 1)) * plotWidth);
+    const y = padding.top + plotHeight - ((getGradeValue(record.grade) - yMin) / yRange) * plotHeight;
+    return { record, x, y };
+  });
+  const path = points.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`).join(" ");
+  const areaPath =
+    points.length > 0
+      ? `${path} L ${points[points.length - 1].x} ${padding.top + plotHeight} L ${points[0].x} ${padding.top + plotHeight} Z`
+      : "";
+
+  return (
+    <Card className="border-2 border-yellow-200 bg-white p-4 shadow-sm">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold text-gray-900">최근 등급 변화</h2>
+          <p className="text-xs text-gray-500">최근 5개 기록 기준</p>
+        </div>
+      </div>
+
+      {recentRecords.length === 0 ? (
+        <div className="flex h-40 items-center justify-center rounded-xl bg-yellow-50 text-sm text-gray-500">
+          기록이 쌓이면 변화 그래프가 표시됩니다.
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <svg viewBox={`0 0 ${width} ${height}`} className="min-w-[520px] rounded-xl bg-white">
+            <defs>
+              <linearGradient id="gradeTrendFill" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stopColor="#facc15" stopOpacity="0.72" />
+                <stop offset="100%" stopColor="#fef3c7" stopOpacity="0.08" />
+              </linearGradient>
+            </defs>
+
+            {visibleGrades.map(({ grade, index }) => {
+              const y = padding.top + plotHeight - ((index - yMin) / yRange) * plotHeight;
+              return (
+                <g key={grade}>
+                  <line x1={padding.left} x2={width - padding.right} y1={y} y2={y} stroke="#f1f5f9" strokeWidth="1.5" />
+                  <text x={padding.left - 10} y={y + 4} textAnchor="end" className="fill-gray-500 text-[10px] font-semibold">
+                    {grade}
+                  </text>
+                </g>
+              );
+            })}
+
+            {points.map(({ x }, index) => (
+              <line
+                key={`x-${index}`}
+                x1={x}
+                x2={x}
+                y1={padding.top}
+                y2={padding.top + plotHeight}
+                stroke="#f1f5f9"
+                strokeWidth="1.5"
+              />
+            ))}
+
+            {points.length > 1 && <path d={areaPath} fill="url(#gradeTrendFill)" />}
+            {points.length > 1 && <path d={path} fill="none" stroke="#eab308" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />}
+
+            {points.map(({ record, x, y }, index) => (
+              <g key={record.id}>
+                <circle cx={x} cy={y} r="5" fill="#eab308" stroke="#ffffff" strokeWidth="2" />
+                <text x={x} y={y - 13} textAnchor="middle" className="fill-gray-900 text-[11px] font-bold">
+                  {record.grade}
+                </text>
+                <text x={x} y={height - 15} textAnchor="middle" className="fill-gray-500 text-[10px] font-semibold">
+                  {index + 1}회
+                </text>
+              </g>
+            ))}
+          </svg>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function GradeBars({
+  record,
+  expanded,
+  onToggle,
+}: {
+  record: ScoreRecord;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
   const currentIndex = gradeOrder.indexOf(record.grade);
 
   return (
@@ -71,7 +180,7 @@ function GradeBars({ record }: { record: ScoreRecord }) {
 
           return (
             <div key={grade} className="flex flex-1 flex-col items-center gap-1">
-              <div className="flex h-24 w-full items-end rounded-md bg-gray-100 px-1">
+              <div className="flex h-24 w-full items-end rounded-md bg-white/80 px-1">
                 <div
                   className={`w-full rounded-t-md transition-all ${
                     isCurrent ? "bg-yellow-400" : index < currentIndex ? "bg-gray-300" : "bg-gray-200"
@@ -86,11 +195,21 @@ function GradeBars({ record }: { record: ScoreRecord }) {
           );
         })}
       </div>
-      <div className="rounded-lg bg-gray-900 px-4 py-3 text-white">
+      <div className="flex items-center justify-between gap-3 rounded-lg bg-gray-900 px-4 py-3 text-white">
         <div>
           <p className="text-xs font-semibold text-yellow-300">예상 OPIc 등급</p>
           <p className="text-3xl font-black">{record.grade}</p>
         </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={onToggle}
+          className="h-8 shrink-0 gap-1.5 border-yellow-300 bg-white px-3 text-xs font-semibold text-gray-900 hover:bg-yellow-50"
+        >
+          {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+          상세 정보
+        </Button>
       </div>
     </div>
   );
@@ -101,7 +220,7 @@ function DetailBar({ label, value, max, suffix }: { label: string; value: number
   const percentage = Math.max(0, Math.min((safeValue / max) * 100, 100));
 
   return (
-    <div className="grid min-h-12 grid-cols-[7rem_1fr_4.75rem] items-center gap-3 rounded-xl border border-gray-200 bg-white px-3 py-2">
+    <div className="grid min-h-12 grid-cols-[7rem_1fr_4.75rem] items-center gap-3 rounded-xl border border-yellow-100 bg-white px-3 py-2 shadow-sm">
       <p className="text-sm font-semibold text-gray-700">{label}</p>
       <div className="h-2.5 overflow-hidden rounded-full bg-gray-100">
         <div className="h-full rounded-full bg-yellow-400" style={{ width: `${percentage}%` }} />
@@ -125,61 +244,44 @@ function RecordCard({
   onDelete: () => void;
 }) {
   return (
-    <Card className="overflow-hidden border-2 border-gray-200 bg-white">
-      <div className="grid gap-0 lg:grid-cols-[1fr_1.25fr]">
-        <div className="bg-yellow-50 p-5">
-          <div className="mb-4 flex items-start justify-between gap-3">
-            <div>
-              <span className="rounded-full bg-yellow-400 px-3 py-1 text-xs font-semibold text-gray-900">
-                {modeLabels[record.mode as RecordMode]}
-              </span>
-              <h3 className="mt-3 text-xl font-bold text-gray-900">{record.title}</h3>
-              <p className="text-sm text-gray-500">{formatDate(record.updatedAt)}</p>
-            </div>
-            <Button variant="ghost" size="icon" onClick={onDelete} aria-label="기록 삭제">
-              <Trash2 className="h-4 w-4 text-gray-500" />
-            </Button>
-          </div>
-          <GradeBars record={record} />
+    <Card className="overflow-hidden border-2 border-yellow-200 bg-yellow-50 p-5">
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div>
+          <span className="rounded-full bg-yellow-400 px-3 py-1 text-xs font-semibold text-gray-900">
+            {modeLabels[record.mode as RecordMode]}
+          </span>
+          <h3 className="mt-3 text-xl font-bold text-gray-900">{record.title}</h3>
+          <p className="text-sm text-gray-500">{formatDate(record.updatedAt)}</p>
         </div>
-
-        <div className="p-5">
-          <p className="text-sm font-semibold text-gray-500">판정 근거</p>
-          <p className="mt-1 text-base font-medium text-gray-900">{record.reason}</p>
-          {record.feedback && <p className="mt-2 text-sm leading-6 text-gray-600">{record.feedback}</p>}
-          <p className="mt-3 text-xs text-gray-500">
-            채점 문항 {record.completedQuestions}/{record.totalQuestions}개 기준
-          </p>
-
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onToggle}
-            className="mt-5 gap-2 border-yellow-300 text-gray-900 hover:bg-yellow-50"
-          >
-            {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-            상세 정보
-          </Button>
-
-          {expanded && (
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-5 space-y-4">
-              <div className="grid gap-2">
-                {detailMetricLabels.map((item) => {
-                  const value = metricValue(record.metrics[item.key], item.percent);
-                  return <DetailBar key={item.key} label={item.label} value={value} max={item.max} suffix={item.suffix} />;
-                })}
-              </div>
-
-              <div className="grid gap-2 lg:grid-cols-2">
-                {Object.entries(record.categoryScores).map(([key, value]) => (
-                  <DetailBar key={key} label={scoreMetricLabels[key] || key} value={value} max={100} suffix="점" />
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </div>
+        <Button variant="ghost" size="icon" onClick={onDelete} aria-label="기록 삭제">
+          <Trash2 className="h-4 w-4 text-gray-500" />
+        </Button>
       </div>
+
+      <GradeBars record={record} expanded={expanded} onToggle={onToggle} />
+
+      {expanded && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-3 rounded-xl border border-yellow-200 bg-white/75 p-3"
+        >
+          <div className="grid gap-2">
+            {detailMetricLabels.map((item) => {
+              const value = metricValue(record.metrics[item.key], item.percent);
+              return <DetailBar key={item.key} label={item.label} value={value} max={item.max} suffix={item.suffix} />;
+            })}
+          </div>
+
+          {Object.keys(record.categoryScores).length > 0 && (
+            <div className="mt-4 grid gap-2 lg:grid-cols-2">
+              {Object.entries(record.categoryScores).map(([key, value]) => (
+                <DetailBar key={key} label={scoreMetricLabels[key] || key} value={value} max={100} suffix="점" />
+              ))}
+            </div>
+          )}
+        </motion.div>
+      )}
     </Card>
   );
 }
@@ -218,23 +320,26 @@ export function Records() {
           </Button>
           <div>
             <h1 className="text-3xl font-bold text-gray-900">점수 기록 확인</h1>
-            <p className="text-gray-600">저장된 평가 결과만 모아 연습과 모의고사를 따로 확인하세요.</p>
+            <p className="text-gray-600">저장된 평가 결과를 연습과 모의고사로 나누어 확인하세요.</p>
           </div>
         </div>
 
-        <div className="mb-6 grid grid-cols-2 gap-3 rounded-xl bg-white p-2 shadow-sm">
-          {(["practice", "mock_test"] as RecordMode[]).map((mode) => (
-            <button
-              key={mode}
-              type="button"
-              onClick={() => setActiveMode(mode)}
-              className={`rounded-lg px-4 py-3 text-sm font-semibold transition ${
-                activeMode === mode ? "bg-yellow-400 text-gray-900" : "text-gray-600 hover:bg-yellow-50"
-              }`}
-            >
-              {modeLabels[mode]} ({mode === "practice" ? practiceCount : mockTestCount})
-            </button>
-          ))}
+        <div className="sticky top-0 z-20 mb-6 space-y-3 bg-gray-50 pb-3">
+          <div className="grid grid-cols-2 gap-3 rounded-xl bg-white p-2 shadow-sm">
+            {(["practice", "mock_test"] as RecordMode[]).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setActiveMode(mode)}
+                className={`rounded-lg px-4 py-3 text-sm font-semibold transition ${
+                  activeMode === mode ? "bg-yellow-400 text-gray-900" : "text-gray-600 hover:bg-yellow-50"
+                }`}
+              >
+                {modeLabels[mode]} ({mode === "practice" ? practiceCount : mockTestCount})
+              </button>
+            ))}
+          </div>
+          <RecentGradeTrend records={visibleRecords} />
         </div>
 
         {visibleRecords.length === 0 ? (
@@ -244,7 +349,7 @@ export function Records() {
             </div>
             <h2 className="text-xl font-bold text-gray-900">아직 저장된 점수 기록이 없습니다</h2>
             <p className="mt-2 text-sm text-gray-600">
-              결과 화면을 확인하면 예상 등급, 점수, 세부 지표가 자동으로 기록됩니다.
+              결과 화면을 확인하면 예상 등급과 세부 지표가 자동으로 기록됩니다.
             </p>
           </Card>
         ) : (
