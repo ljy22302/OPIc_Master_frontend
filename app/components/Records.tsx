@@ -320,7 +320,7 @@ export function Records() {
           </Button>
           <div>
             <h1 className="text-3xl font-bold text-gray-900">점수 기록 확인</h1>
-            <p className="text-gray-600">저장된 평가 결과를 연습과 모의고사로 나누어 확인하세요.</p>
+            <p className="text-gray-600">저장된 평가 결과는 한 달간 보관됩니다.</p>
           </div>
         </div>
 
