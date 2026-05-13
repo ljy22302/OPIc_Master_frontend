@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { motion } from "motion/react";
 import { ArrowLeft, ChevronUp, HelpCircle, Mic, Play, RotateCcw, Square } from "lucide-react";
@@ -34,6 +34,8 @@ type MockTestQuestionState = {
   mockTestQuestions?: MockTestQuestionItem[];
 };
 
+type QuestionResultsState = Array<EvaluationAnswer | null>;
+
 export function MockTestQuestion() {
   const recordingLimit = 120;
   const navigate = useNavigate();
@@ -53,6 +55,16 @@ export function MockTestQuestion() {
     sessionId: initialSessionId,
     mockTestQuestions: initialMockTestQuestions = [] as MockTestQuestionItem[],
   } = (location.state as MockTestQuestionState) ?? {};
+  const buildQuestionResultsState = (items: EvaluationAnswer[], totalLength = initialMockTestQuestions.length || items.length || 0): QuestionResultsState => {
+    const base = Array.from({ length: totalLength }, () => null) as QuestionResultsState;
+    items.forEach((item, index) => {
+      if (index < base.length) {
+        base[index] = item;
+      }
+    });
+    return base;
+  };
+  const isMountedRef = useRef(true);
 
   const [mockTestQuestions, setMockTestQuestions] = useState<MockTestQuestionItem[]>(initialMockTestQuestions);
   const [currentQuestion, setCurrentQuestion] = useState(initialCurrentQuestion);
@@ -69,7 +81,10 @@ export function MockTestQuestion() {
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [questionSpeechError, setQuestionSpeechError] = useState("");
   const [interactionNotice, setInteractionNotice] = useState("");
-  const [questionResults, setQuestionResults] = useState<EvaluationAnswer[]>(initialQuestionResults);
+  const [pendingUploadCount, setPendingUploadCount] = useState(0);
+  const [questionResults, setQuestionResults] = useState<QuestionResultsState>(() => buildQuestionResultsState(initialQuestionResults));
+  const questionResultsRef = useRef<QuestionResultsState>(buildQuestionResultsState(initialQuestionResults));
+  const queuedUploadPromisesRef = useRef<Array<Promise<EvaluationAnswer>>>([]);
 
   const questionCount = mockTestQuestions.length;
   const currentQ = mockTestQuestions[currentQuestion];
@@ -94,6 +109,13 @@ export function MockTestQuestion() {
     speak,
     stop,
   } = useQuestionSpeech();
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -153,7 +175,9 @@ export function MockTestQuestion() {
         setMockTestQuestions(mockSession.questions);
         setCurrentQuestion(Math.min(initialCurrentQuestion, Math.max(mockSession.questions.length - 1, 0)));
         setSessionId(session.id);
-        setQuestionResults(session.answers);
+        const nextResults = buildQuestionResultsState(session.answers, mockSession.questions.length);
+        questionResultsRef.current = nextResults;
+        setQuestionResults(nextResults);
       } catch (sessionCreateError) {
         if (!isMounted) {
           return;
@@ -161,7 +185,7 @@ export function MockTestQuestion() {
         setSessionError(
           sessionCreateError instanceof Error
             ? sessionCreateError.message
-            : "모의고사 세션 준비에 실패했습니다.",
+            : "紐⑥쓽怨좎궗 ?몄뀡 以鍮꾩뿉 ?ㅽ뙣?덉뒿?덈떎.",
         );
       } finally {
         if (isMounted) {
@@ -251,8 +275,63 @@ export function MockTestQuestion() {
   const isBusy = isUploading || isEvaluating || isPreparingSession;
   const isPlayBlockedByRecording = isRecording;
   const isRecordBlockedBySpeaking = isSpeaking;
+  const updateQuestionResult = (questionIndex: number, evaluation: EvaluationAnswer) => {
+    const nextResults = [...questionResultsRef.current];
+    nextResults[questionIndex] = evaluation;
+    questionResultsRef.current = nextResults;
+    if (isMountedRef.current) {
+      setQuestionResults(nextResults);
+    }
+  };
+  const queueEvaluationUpload = (
+    questionIndex: number,
+    question: MockTestQuestionItem,
+    recording = lastRecording,
+  ) => {
+    if (!sessionId) {
+      throw new Error("?됯? ?몄뀡??李얠쓣 ???놁뒿?덈떎.");
+    }
 
-  const difficultyLabel = difficulty === "3-4" ? "레벨 3-4" : difficulty === "5-6" ? "레벨 5-6" : "";
+    if (isMountedRef.current) {
+      setPendingUploadCount((prev) => prev + 1);
+    }
+
+    const uploadPromise = uploadAnswerEvaluation({
+      sessionId,
+      mode: "mock_test",
+      questionId: `mock-test-${question.id}`,
+      questionOrder: questionIndex + 1,
+      questionText: question.questionText,
+      questionType: question.questionType,
+      clientDurationSeconds: recording?.durationSeconds || 0,
+      audioBlob: recording?.audioBlob || null,
+      fileName: recording?.fileName,
+      clientTranscript: recording?.clientTranscript,
+    })
+      .then((evaluation) => {
+        updateQuestionResult(questionIndex, evaluation);
+        return evaluation;
+      })
+      .catch((uploadError) => {
+        const message = uploadError instanceof Error ? uploadError.message : "?듬? ?됯????ㅽ뙣?덉뒿?덈떎.";
+        if (isMountedRef.current) {
+          setSessionError(message);
+        }
+        throw uploadError;
+      })
+      .finally(() => {
+        if (isMountedRef.current) {
+          setPendingUploadCount((prev) => Math.max(prev - 1, 0));
+        }
+      });
+
+    queuedUploadPromisesRef.current = [...queuedUploadPromisesRef.current, uploadPromise];
+    return uploadPromise;
+  };
+  const getCompletedQuestionResults = () =>
+    questionResultsRef.current.filter((item): item is EvaluationAnswer => Boolean(item));
+
+  const difficultyLabel = difficulty === "3-4" ? "?덈꺼 3-4" : difficulty === "5-6" ? "?덈꺼 5-6" : "";
 
   const handlePlayQuestion = () => {
     if (playCount >= 2 || !currentQ?.questionText) {
@@ -260,18 +339,18 @@ export function MockTestQuestion() {
     }
 
     if (isPlayBlockedByRecording) {
-      setInteractionNotice("녹음 중에는 문제 듣기를 함께 실행할 수 없어요. 먼저 녹음을 종료해 주세요.");
+      setInteractionNotice("?뱀쓬 以묒뿉??臾몄젣 ?ｊ린瑜??④퍡 ?ㅽ뻾?????놁뼱?? 癒쇱? ?뱀쓬??醫낅즺??二쇱꽭??");
       return;
     }
 
     if (!isQuestionSpeechSupported) {
-      setQuestionSpeechError("이 브라우저에서는 문제 듣기 기능을 지원하지 않습니다.");
+      setQuestionSpeechError("??釉뚮씪?곗??먯꽌??臾몄젣 ?ｊ린 湲곕뒫??吏?먰븯吏 ?딆뒿?덈떎.");
       return;
     }
 
     const didSpeak = speak(currentQ.questionText);
     if (!didSpeak) {
-      setQuestionSpeechError("문제를 음성으로 읽지 못했습니다.");
+      setQuestionSpeechError("臾몄젣瑜??뚯꽦?쇰줈 ?쎌? 紐삵뻽?듬땲??");
       return;
     }
 
@@ -285,7 +364,7 @@ export function MockTestQuestion() {
     }
 
     if (!isRecording && isRecordBlockedBySpeaking) {
-      setInteractionNotice("문제 듣기 중에는 녹음을 함께 실행할 수 없어요. 문제 듣기가 끝난 뒤 다시 시도해 주세요.");
+      setInteractionNotice("臾몄젣 ?ｊ린 以묒뿉???뱀쓬???④퍡 ?ㅽ뻾?????놁뼱?? 臾몄젣 ?ｊ린媛 ?앸궃 ???ㅼ떆 ?쒕룄??二쇱꽭??");
       return;
     }
 
@@ -307,36 +386,17 @@ export function MockTestQuestion() {
     try {
       setTransitionMessage(
         nextAction === "script"
-          ? "스크립트 화면을 준비하고 있습니다..."
-          : "답변을 저장하고 평가하고 있습니다...",
+          ? "?ㅽ겕由쏀듃 ?붾㈃??以鍮꾪븯怨??덉뒿?덈떎..."
+          : "?듬?????ν븯怨??됯??섍퀬 ?덉뒿?덈떎...",
       );
-      setTransitionPhase("saving");
-      setIsEvaluating(true);
-
       const recording = isRecording ? await stopRecording() : lastRecording;
-      const evaluation = await uploadAnswerEvaluation({
-        sessionId,
-        mode: "mock_test",
-        questionId: `mock-test-${currentQ.id}`,
-        questionOrder: currentQuestion + 1,
-        questionText: currentQ.questionText,
-        questionType: currentQ.questionType,
-        clientDurationSeconds: recording?.durationSeconds || 0,
-        audioBlob: recording?.audioBlob || null,
-        fileName: recording?.fileName,
-      });
-
-      const nextResults = Array.from({ length: questionCount }, (_, index) => questionResults[index] || null);
-      nextResults[currentQuestion] = evaluation;
-      setQuestionResults(nextResults.filter(Boolean) as EvaluationAnswer[]);
-
-      const transitionDelay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-      await transitionDelay(800);
+      setSessionError("");
+      queueEvaluationUpload(currentQuestion, currentQ, recording);
 
       if (nextAction === "next") {
         setTransitionPhase("preparing");
-        setTransitionMessage("다음 문제로 이동 중입니다...");
-        await transitionDelay(700);
+        setTransitionMessage("?? ??? ?? ????...");
+        await new Promise((resolve) => window.setTimeout(resolve, 800));
         setCurrentQuestion((prev) => prev + 1);
         setRecordingTime(recordingLimit);
         setPlayCount(0);
@@ -344,12 +404,22 @@ export function MockTestQuestion() {
         setShowTranslation(false);
         resetRecording();
       } else {
+        setTransitionMessage("결과 화면으로 이동중입니다...");
+        setTransitionPhase("saving");
+        setIsEvaluating(true);
+        await Promise.all(queuedUploadPromisesRef.current);
+
+        const completedResults = getCompletedQuestionResults();
+        if (completedResults.length < questionCount) {
+          throw new Error("?쇰? ?듬? ??μ씠 ?꾩쭅 ?앸굹吏 ?딆븯?듬땲?? ?좎떆 ???ㅼ떆 ?쒕룄??二쇱꽭??");
+        }
+
         navigate(`/mocktest/script?sessionId=${sessionId}`, {
           state: {
             sessionId,
             questionCount,
             mockTestQuestions,
-            questionResults: nextResults.filter(Boolean),
+            questionResults: completedResults,
             difficulty,
             currentStatus,
             studentStatus,
@@ -365,7 +435,7 @@ export function MockTestQuestion() {
       setSessionError(
         evaluationError instanceof Error
           ? evaluationError.message
-          : "답변 평가에 실패했습니다.",
+          : "?듬? ?됯????ㅽ뙣?덉뒿?덈떎.",
       );
     } finally {
       setIsEvaluating(false);
@@ -383,7 +453,7 @@ export function MockTestQuestion() {
               variant="ghost"
               size="icon"
               onClick={() => {
-                if (window.confirm("모의고사를 나가시겠습니까? 지금까지 진행한 내용은 저장되지 않을 수 있습니다.")) {
+                if (window.confirm("紐⑥쓽怨좎궗瑜??섍??쒓쿋?듬땲源? 吏湲덇퉴吏 吏꾪뻾???댁슜? ??λ릺吏 ?딆쓣 ???덉뒿?덈떎.")) {
                   navigate("/mocktest/setup");
                 }
               }}
@@ -392,13 +462,13 @@ export function MockTestQuestion() {
             </Button>
             <div className="flex items-center gap-6">
               <div className="text-center">
-                <p className="text-xs text-gray-500">문항</p>
+                <p className="text-xs text-gray-500">臾명빆</p>
                 <p className="text-sm font-bold text-gray-900">
                   {questionCount > 0 ? currentQuestion + 1 : 0} / {questionCount}
                 </p>
               </div>
               <div className="text-center">
-                <p className="text-xs text-gray-500">전체 시간</p>
+                <p className="text-xs text-gray-500">?꾩껜 ?쒓컙</p>
                 <p className="text-sm font-bold text-gray-900">{formatTime(totalTime)}</p>
               </div>
             </div>
@@ -443,7 +513,7 @@ export function MockTestQuestion() {
                   className={`flex h-8 w-full max-w-64 overflow-hidden rounded-md border border-gray-200 bg-white shadow-sm transition disabled:cursor-default disabled:opacity-100 ${
                     isPlayBlockedByRecording ? "cursor-not-allowed opacity-70" : ""
                   }`}
-                  aria-label={playCount > 0 ? "문제 다시 듣기" : "문제 듣기"}
+                  aria-label={playCount > 0 ? "臾몄젣 ?ㅼ떆 ?ｊ린" : "臾몄젣 ?ｊ린"}
                 >
                   <div className={`flex w-8 items-center justify-center text-white ${playCount >= 2 && !isSpeaking ? "bg-gray-300" : "bg-orange-500"}`}>
                     {playCount > 0 && !isSpeaking ? (
@@ -464,7 +534,7 @@ export function MockTestQuestion() {
                     </div>
                   </div>
                 </button>
-                <p className="mt-1 text-center text-xs text-gray-500">최대 2회 재생</p>
+                <p className="mt-1 text-center text-xs text-gray-500">理쒕? 2???ъ깮</p>
               </div>
 
               <div className="flex flex-col justify-center">
@@ -491,7 +561,7 @@ export function MockTestQuestion() {
                     className="mt-6 flex w-full flex-col items-center gap-3"
                   >
                     <p className="text-center text-lg font-medium leading-relaxed text-gray-900">
-                      {currentQ?.questionText || "문제를 불러오는 중입니다."}
+                      {currentQ?.questionText || "臾몄젣瑜?遺덈윭?ㅻ뒗 以묒엯?덈떎."}
                     </p>
 
                     {!showTranslation && (
@@ -502,7 +572,7 @@ export function MockTestQuestion() {
                         onClick={() => setShowTranslation(true)}
                         className="gap-2 border-yellow-300 bg-white text-yellow-900 hover:bg-yellow-100"
                       >
-                        해석 보기
+                        ?댁꽍 蹂닿린
                       </Button>
                     )}
 
@@ -513,7 +583,7 @@ export function MockTestQuestion() {
                         animate={{ opacity: 1, y: 0 }}
                         className="max-w-[36rem] text-center text-sm font-medium leading-relaxed text-gray-700"
                       >
-                        {currentQ?.translation || "해석이 등록되지 않은 문제입니다."}
+                        {currentQ?.translation || "?댁꽍???깅줉?섏? ?딆? 臾몄젣?낅땲??"}
                       </motion.p>
                     )}
 
@@ -526,10 +596,10 @@ export function MockTestQuestion() {
                         setShowTranslation(false);
                       }}
                       className="h-7 rounded-full border border-yellow-300 bg-white px-2.5 text-xs text-yellow-900 shadow-sm hover:bg-yellow-100"
-                      aria-label="문제 닫기"
+                      aria-label="臾몄젣 ?リ린"
                     >
                       <ChevronUp className="h-4 w-4" />
-                      닫기
+                      ?リ린
                     </Button>
                   </motion.div>
                 ) : (
@@ -545,7 +615,7 @@ export function MockTestQuestion() {
                       className="min-h-[72px] w-full gap-2 border-yellow-100 bg-yellow-50 text-base font-semibold text-yellow-900 shadow-md hover:bg-yellow-100 hover:shadow-lg disabled:bg-yellow-50 sm:min-h-[84px] sm:text-xl"
                     >
                       <HelpCircle className="h-4 w-4 shrink-0" />
-                      문제 보기
+                      臾몄젣 蹂닿린
                     </Button>
                   </div>
                 )}
@@ -566,16 +636,16 @@ export function MockTestQuestion() {
               }`}
             >
               {isRecording ? <Square className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-              {isRecording ? "녹음 종료" : "녹음 시작"}
+              {isRecording ? "?뱀쓬 醫낅즺" : "?뱀쓬 ?쒖옉"}
             </Button>
           </div>
 
           {isPreparingSession && (
-            <p className="mb-4 text-center text-sm text-gray-500">선택 정보를 바탕으로 모의고사 문제를 준비 중입니다...</p>
+            <p className="mb-4 text-center text-sm text-gray-500">?좏깮 ?뺣낫瑜?諛뷀깢?쇰줈 紐⑥쓽怨좎궗 臾몄젣瑜?以鍮?以묒엯?덈떎...</p>
           )}
 
           {isEvaluating && (
-            <p className="mb-4 text-center text-sm text-gray-500">답변 업로드 및 평가 중...</p>
+            <p className="mb-4 text-center text-sm text-gray-500">?듬? ?낅줈??諛??됯? 以?..</p>
           )}
 
           {error && <p className="mb-4 text-center text-sm text-red-500">{error}</p>}
@@ -589,13 +659,13 @@ export function MockTestQuestion() {
 
           {currentSavedResult?.usedTranscript && (
             <div className="mb-4 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
-              방금 저장한 스크립트: {currentSavedResult.usedTranscript}
+              諛⑷툑 ??ν븳 ?ㅽ겕由쏀듃: {currentSavedResult.usedTranscript}
             </div>
           )}
 
           <div className="mb-4 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3">
             <div className="mb-2 flex items-center justify-between gap-4 text-sm text-gray-700">
-              <span className="font-medium text-gray-600">녹음 시간</span>
+              <span className="font-medium text-gray-600">?뱀쓬 ?쒓컙</span>
               <span className={`font-semibold ${isOvertime || recordingTime < 30 ? "text-red-500" : "text-gray-900"}`}>
                 {formatRecordingTime(recordingTime)}
               </span>
@@ -621,7 +691,7 @@ export function MockTestQuestion() {
           disabled={isBusy || !sessionId || !currentQ}
           className="w-full bg-yellow-400 text-gray-900 hover:bg-yellow-500 disabled:opacity-70"
         >
-          {currentQuestion < questionCount - 1 ? "다음 문제" : "시험 종료"}
+          {currentQuestion < questionCount - 1 ? "?ㅼ쓬 臾몄젣" : "?쒗뿕 醫낅즺"}
         </Button>
       </div>
 
@@ -638,7 +708,7 @@ export function MockTestQuestion() {
               </div>
             </div>
             <p className="text-center text-2xl font-bold text-gray-900">{transitionMessage}</p>
-            <p className="mt-3 text-center text-sm text-gray-600">잠시만 기다려 주세요.</p>
+            <p className="mt-3 text-center text-sm text-gray-600">?좎떆留?湲곕떎??二쇱꽭??</p>
           </motion.div>
         </div>
       )}

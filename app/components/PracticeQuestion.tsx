@@ -1,5 +1,6 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
+import { useRef } from "react";
 import { motion } from "motion/react";
 import { ArrowLeft, ChevronUp, HelpCircle, Lightbulb, Mic, Play, RotateCcw, Square } from "lucide-react";
 import { useQuestionSpeech } from "../hooks/useQuestionSpeech";
@@ -35,6 +36,8 @@ type PracticeQuestionState = {
   questionResults?: EvaluationAnswer[];
   sessionId?: number;
 };
+
+type QuestionResultsState = Array<EvaluationAnswer | null>;
 
 const hintWordMeanings: Record<string, string> = {
   activities: "활동",
@@ -91,6 +94,16 @@ export function PracticeQuestion() {
 
   const visibleQuestions = useMemo(() => questions, [questions]);
   const questionLimit = visibleQuestions.length;
+  const buildQuestionResultsState = (items: EvaluationAnswer[]): QuestionResultsState => {
+    const base = Array.from({ length: questionLimit }, () => null) as QuestionResultsState;
+    items.forEach((item, index) => {
+      if (index < base.length) {
+        base[index] = item;
+      }
+    });
+    return base;
+  };
+  const isMountedRef = useRef(true);
 
   const [currentQuestion, setCurrentQuestion] = useState(() =>
     Math.min(initialCurrentQuestion, Math.max(questionLimit - 1, 0)),
@@ -108,15 +121,10 @@ export function PracticeQuestion() {
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [questionSpeechError, setQuestionSpeechError] = useState("");
   const [interactionNotice, setInteractionNotice] = useState("");
-  const [questionResults, setQuestionResults] = useState<EvaluationAnswer[]>(() => {
-    const base = Array.from({ length: questionLimit }, () => null) as Array<EvaluationAnswer | null>;
-    initialQuestionResults.forEach((item, index) => {
-      if (index < base.length) {
-        base[index] = item;
-      }
-    });
-    return base.filter(Boolean) as EvaluationAnswer[];
-  });
+  const [pendingUploadCount, setPendingUploadCount] = useState(0);
+  const [questionResults, setQuestionResults] = useState<QuestionResultsState>(() => buildQuestionResultsState(initialQuestionResults));
+  const questionResultsRef = useRef<QuestionResultsState>(buildQuestionResultsState(initialQuestionResults));
+  const queuedUploadPromisesRef = useRef<Array<Promise<EvaluationAnswer>>>([]);
 
   const {
     error,
@@ -138,6 +146,13 @@ export function PracticeQuestion() {
     speak,
     stop,
   } = useQuestionSpeech();
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -179,7 +194,9 @@ export function PracticeQuestion() {
         }
 
         setSessionId(session.id);
-        setQuestionResults(session.answers);
+        const nextResults = buildQuestionResultsState(session.answers);
+        questionResultsRef.current = nextResults;
+        setQuestionResults(nextResults);
       } catch (sessionCreateError) {
         if (!isMounted) {
           return;
@@ -266,6 +283,61 @@ export function PracticeQuestion() {
   const canPlayQuestion = playCount < 2;
   const isPlayBlockedByRecording = isRecording;
   const isRecordBlockedBySpeaking = isSpeaking;
+  const updateQuestionResult = (questionIndex: number, evaluation: EvaluationAnswer) => {
+    const nextResults = [...questionResultsRef.current];
+    nextResults[questionIndex] = evaluation;
+    questionResultsRef.current = nextResults;
+    if (isMountedRef.current) {
+      setQuestionResults(nextResults);
+    }
+  };
+  const queueEvaluationUpload = (
+    questionIndex: number,
+    question: PracticeQuestionItem,
+    recording = lastRecording,
+  ) => {
+    if (!sessionId) {
+      throw new Error("평가 세션을 찾을 수 없습니다.");
+    }
+
+    if (isMountedRef.current) {
+      setPendingUploadCount((prev) => prev + 1);
+    }
+
+    const uploadPromise = uploadAnswerEvaluation({
+      sessionId,
+      mode: "practice",
+      questionId: `practice-${question.id}`,
+      questionOrder: questionIndex + 1,
+      questionText: question.text,
+      questionType: selectedType || "practice",
+      clientDurationSeconds: recording?.durationSeconds || 0,
+      audioBlob: recording?.audioBlob || null,
+      fileName: recording?.fileName,
+      clientTranscript: recording?.clientTranscript,
+    })
+      .then((evaluation) => {
+        updateQuestionResult(questionIndex, evaluation);
+        return evaluation;
+      })
+      .catch((uploadError) => {
+        const message = uploadError instanceof Error ? uploadError.message : "답변 평가에 실패했습니다.";
+        if (isMountedRef.current) {
+          setSessionError(message);
+        }
+        throw uploadError;
+      })
+      .finally(() => {
+        if (isMountedRef.current) {
+          setPendingUploadCount((prev) => Math.max(prev - 1, 0));
+        }
+      });
+
+    queuedUploadPromisesRef.current = [...queuedUploadPromisesRef.current, uploadPromise];
+    return uploadPromise;
+  };
+  const getCompletedQuestionResults = () =>
+    questionResultsRef.current.filter((item): item is EvaluationAnswer => Boolean(item));
 
   const handlePlayQuestion = () => {
     if (!canPlayQuestion || !currentQuestionItem?.text) {
@@ -318,38 +390,14 @@ export function PracticeQuestion() {
     const nextAction: TransitionAction = currentQuestion < visibleQuestions.length - 1 ? "next" : "result";
 
     try {
-      setTransitionMessage(
-        nextAction === "result"
-          ? "최종 결과를 준비하고 있습니다..."
-          : "답변을 저장하고 있습니다...",
-      );
-      setTransitionPhase("saving");
-      setIsEvaluating(true);
-
       const recording = isRecording ? await stopRecording() : lastRecording;
-      const evaluation = await uploadAnswerEvaluation({
-        sessionId,
-        mode: "practice",
-        questionId: `practice-${currentQuestionItem.id}`,
-        questionOrder: currentQuestion + 1,
-        questionText: currentQuestionItem.text,
-        questionType: selectedType || "practice",
-        clientDurationSeconds: recording?.durationSeconds || 0,
-        audioBlob: recording?.audioBlob || null,
-        fileName: recording?.fileName,
-      });
-
-      const nextResults = Array.from({ length: visibleQuestions.length }, (_, index) => questionResults[index] || null);
-      nextResults[currentQuestion] = evaluation;
-      setQuestionResults(nextResults.filter(Boolean) as EvaluationAnswer[]);
-
-      const transitionDelay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-      await transitionDelay(800);
+      setSessionError("");
+      queueEvaluationUpload(currentQuestion, currentQuestionItem, recording);
 
       if (nextAction === "next") {
         setTransitionPhase("preparing");
         setTransitionMessage("다음 문제로 이동 중입니다...");
-        await transitionDelay(700);
+        await new Promise((resolve) => window.setTimeout(resolve, 800));
         setCurrentQuestion((prev) => prev + 1);
         setTimeLeft(recordingLimit);
         setShowQuestion(false);
@@ -358,6 +406,16 @@ export function PracticeQuestion() {
         setPlayCount(0);
         resetRecording();
       } else {
+        setTransitionMessage("결과 화면으로 이동중입니다...");
+        setTransitionPhase("saving");
+        setIsEvaluating(true);
+        await Promise.all(queuedUploadPromisesRef.current);
+
+        const completedResults = getCompletedQuestionResults();
+        if (completedResults.length < visibleQuestions.length) {
+          throw new Error("일부 답변 저장이 아직 끝나지 않았습니다. 잠시 후 다시 시도해 주세요.");
+        }
+
         navigate(`/practice/script?sessionId=${sessionId}`, {
           state: {
             sessionId,
@@ -368,7 +426,7 @@ export function PracticeQuestion() {
             selectedTopics,
             selectedTopicLabels,
             questions: visibleQuestions,
-            questionResults: nextResults.filter(Boolean),
+            questionResults: completedResults,
           },
         });
       }
