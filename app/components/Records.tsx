@@ -60,7 +60,6 @@ function metricValue(value: number | undefined, percent = false) {
 
 function GradeBars({ record }: { record: ScoreRecord }) {
   const currentIndex = gradeOrder.indexOf(record.grade);
-  const scorePercent = Math.max(0, Math.min(record.score100, 100));
 
   return (
     <div className="space-y-3">
@@ -68,8 +67,7 @@ function GradeBars({ record }: { record: ScoreRecord }) {
         {gradeOrder.map((grade, index) => {
           const isCurrent = index === currentIndex;
           const fallbackHeight = 22 + index * 6;
-          const scoreHeight = Math.max(18, Math.min(96, scorePercent));
-          const height = isCurrent ? scoreHeight : fallbackHeight;
+          const height = isCurrent ? Math.min(92, fallbackHeight + 10) : fallbackHeight;
 
           return (
             <div key={grade} className="flex flex-1 flex-col items-center gap-1">
@@ -88,12 +86,11 @@ function GradeBars({ record }: { record: ScoreRecord }) {
           );
         })}
       </div>
-      <div className="flex items-center justify-between rounded-lg bg-gray-900 px-4 py-3 text-white">
+      <div className="rounded-lg bg-gray-900 px-4 py-3 text-white">
         <div>
           <p className="text-xs font-semibold text-yellow-300">예상 OPIc 등급</p>
           <p className="text-3xl font-black">{record.grade}</p>
         </div>
-        <p className="text-right text-sm text-gray-300">예측 점수<br /><span className="font-bold text-white">{record.score100}점</span></p>
       </div>
     </div>
   );

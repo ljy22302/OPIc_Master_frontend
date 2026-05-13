@@ -8,7 +8,6 @@ export type ScoreRecord = {
   mode: EvaluationMode;
   title: string;
   grade: string;
-  score100: number;
   reason: string;
   feedback: string;
   createdAt: string;
@@ -62,7 +61,6 @@ export function saveScoreRecordFromSession(session: EvaluationSession) {
     mode: session.mode,
     title: session.mode === "mock_test" ? "모의고사 결과" : "연습 결과",
     grade: opic.grade || session.overall.estimatedGrade || "데이터 부족",
-    score100: Number.isFinite(opic.score100) ? opic.score100 : 0,
     reason: opic.gradeReason || opic.summary || "판정 근거가 없습니다.",
     feedback: opic.mainFeedback || session.overall.feedback?.summary || "",
     createdAt: session.createdAt,

@@ -125,7 +125,6 @@ function OpicGradeCard({ opic, hasAudio }: { opic: OpicEvaluation; hasAudio: boo
           <div>
             <p className="text-sm font-semibold text-yellow-300">예상 OPIc 등급</p>
             <p className="mt-3 text-6xl font-black tracking-tight">{grade}</p>
-            <p className="mt-2 text-sm text-gray-300">예측 점수 {opic.score100}점</p>
           </div>
         </div>
 
