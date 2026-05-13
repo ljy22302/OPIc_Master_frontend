@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { motion } from "motion/react";
-import { ArrowLeft, HelpCircle, Mic, Play, RotateCcw, Square } from "lucide-react";
+import { ArrowLeft, ChevronUp, HelpCircle, Mic, Play, RotateCcw, Square } from "lucide-react";
 import { useQuestionSpeech } from "../hooks/useQuestionSpeech";
 import { useSpeechToTextRecorder } from "../hooks/useSpeechToTextRecorder";
 import {
@@ -490,6 +490,21 @@ export function MockTestQuestion() {
                         {currentQ?.translation || "해석이 등록되지 않은 문제입니다."}
                       </motion.p>
                     )}
+
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setShowQuestion(false);
+                        setShowTranslation(false);
+                      }}
+                      className="h-7 rounded-full border border-yellow-300 bg-white px-2.5 text-xs text-yellow-900 shadow-sm hover:bg-yellow-100"
+                      aria-label="문제 닫기"
+                    >
+                      <ChevronUp className="h-4 w-4" />
+                      닫기
+                    </Button>
                   </motion.div>
                 ) : (
                   <div className="mt-4 flex justify-center">
