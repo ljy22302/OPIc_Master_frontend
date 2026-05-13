@@ -455,7 +455,9 @@ export function PracticeQuestion() {
                       setShowTranslation(false);
                     }
                   }}
-                  className={`flex min-h-[150px] w-full items-center justify-center rounded-md border border-yellow-100 bg-yellow-50 px-2 py-3 text-center shadow-md transition hover:bg-yellow-100 hover:shadow-lg sm:min-h-[180px] sm:rounded-xl sm:px-4 ${
+                  className={`flex w-full items-center justify-center rounded-md border border-yellow-100 bg-yellow-50 px-2 text-center shadow-md transition hover:bg-yellow-100 hover:shadow-lg sm:rounded-xl sm:px-4 ${
+                    showQuestion ? "min-h-[150px] py-3 sm:min-h-[180px]" : "min-h-[72px] py-2 sm:min-h-[84px]"
+                  } ${
                     !showQuestion ? "cursor-pointer" : ""
                   }`}
                 >
@@ -510,7 +512,7 @@ export function PracticeQuestion() {
                       </Button>
                     </motion.div>
                   ) : (
-                    <span className="inline-flex items-center gap-2 text-base font-semibold text-yellow-900 sm:text-2xl">
+                    <span className="inline-flex items-center gap-2 text-base font-semibold text-yellow-900 sm:text-xl">
                       <HelpCircle className="h-4 w-4 shrink-0" />
                       문제 보기
                     </span>
@@ -531,7 +533,9 @@ export function PracticeQuestion() {
                       setShowHint(true);
                     }
                   }}
-                  className="flex min-h-[92px] w-full cursor-pointer items-center justify-center rounded-md border border-sky-100 bg-sky-50 px-3 py-4 text-center shadow-md transition hover:bg-sky-100 hover:shadow-lg sm:min-h-[110px] sm:rounded-xl sm:px-4"
+                  className={`flex w-full cursor-pointer items-center justify-center rounded-md border border-sky-100 bg-sky-50 px-3 text-center shadow-md transition hover:bg-sky-100 hover:shadow-lg sm:rounded-xl sm:px-4 ${
+                    showHint ? "min-h-[92px] py-4 sm:min-h-[110px]" : "min-h-[58px] py-2 sm:min-h-[66px]"
+                  }`}
                 >
                   {showHint ? (
                     <motion.div
@@ -572,7 +576,7 @@ export function PracticeQuestion() {
                       </Button>
                     </motion.div>
                   ) : (
-                    <span className="inline-flex items-center gap-2 text-base font-semibold text-sky-900 sm:text-2xl">
+                    <span className="inline-flex items-center gap-2 text-base font-semibold text-sky-900 sm:text-xl">
                       <Lightbulb className="h-4 w-4 shrink-0" />
                       단어 힌트
                     </span>

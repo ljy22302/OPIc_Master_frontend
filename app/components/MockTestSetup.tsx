@@ -193,7 +193,7 @@ export function MockTestSetup() {
                   <h2 className="text-lg font-semibold text-gray-900">선택 정보</h2>
                 </div>
                 <span className="rounded-full bg-yellow-400 px-3 py-1 text-sm font-semibold text-gray-900 lg:hidden">
-                  선택 {selectedTotalCount}개
+                  {selectedTotalCount}/12
                 </span>
                 <span className="hidden rounded-full bg-yellow-400 px-3 py-1 text-sm font-semibold text-gray-900 lg:inline-flex">
                   {difficulty ? difficulties.find((item) => item.value === difficulty)?.label : "레벨 선택"}

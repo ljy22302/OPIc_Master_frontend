@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { motion } from "motion/react";
-import { ArrowLeft, Mic, Play, RotateCcw, Square } from "lucide-react";
+import { ArrowLeft, HelpCircle, Mic, Play, RotateCcw, Square } from "lucide-react";
 import { useQuestionSpeech } from "../hooks/useQuestionSpeech";
 import { useSpeechToTextRecorder } from "../hooks/useSpeechToTextRecorder";
 import {
@@ -492,18 +492,18 @@ export function MockTestQuestion() {
                     )}
                   </motion.div>
                 ) : (
-                  <div className="mt-6 flex justify-center">
+                  <div className="mt-4 flex justify-center">
                     <Button
                       type="button"
                       variant="outline"
-                      size="lg"
                       disabled={!currentQ}
                       onClick={() => {
                         setShowQuestion(true);
                         setShowTranslation(false);
                       }}
-                      className="gap-2 border-yellow-300 bg-white text-yellow-900 hover:bg-yellow-100"
+                      className="min-h-[72px] w-full gap-2 border-yellow-100 bg-yellow-50 text-base font-semibold text-yellow-900 shadow-md hover:bg-yellow-100 hover:shadow-lg disabled:bg-yellow-50 sm:min-h-[84px] sm:text-xl"
                     >
+                      <HelpCircle className="h-4 w-4 shrink-0" />
                       문제 보기
                     </Button>
                   </div>
