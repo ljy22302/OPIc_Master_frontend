@@ -285,7 +285,7 @@ export function EvaluationResultView({
           <p className="text-gray-600">{subtitle}</p>
           {showPracticeNotice && (
             <p className="mt-3 text-sm text-gray-500">
-              연습 모드의 예상 등급은 참고용이며, 실제 모의고사 결과보다 정확도가 낮을 수 있습니다.
+              연습 모드의 예상 등급은 참고용이며, 실제 시험 결과와 다를 수 있습니다.
             </p>
           )}
         </motion.div>
