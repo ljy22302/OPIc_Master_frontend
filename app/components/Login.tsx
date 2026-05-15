@@ -7,6 +7,7 @@ import { Checkbox } from "./ui/checkbox";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { login } from "../lib/authApi";
+import { storeAuthSession } from "../lib/authStorage";
 
 export function Login() {
   const navigate = useNavigate();
@@ -32,15 +33,7 @@ export function Login() {
     try {
       setIsSubmitting(true);
       const result = await login({ username, password });
-      localStorage.setItem("accessToken", result.accessToken);
-      localStorage.setItem("currentUser", JSON.stringify(result.user));
-
-      if (autoLogin) {
-        localStorage.setItem("autoLogin", "true");
-      } else {
-        localStorage.removeItem("autoLogin");
-      }
-
+      storeAuthSession(result.accessToken, result.user, autoLogin);
       navigate("/main");
     } catch (loginError) {
       setError(loginError instanceof Error ? loginError.message : "로그인에 실패했습니다.");

@@ -1,3 +1,5 @@
+import { getAccessToken } from "./authStorage";
+
 const API_BASE_URL =
   (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ||
   (import.meta.env.VITE_STT_API_BASE_URL as string | undefined)?.trim() ||
@@ -5,14 +7,6 @@ const API_BASE_URL =
 
 function buildUrl(path: string) {
   return `${API_BASE_URL.replace(/\/+$/, "")}${path}`;
-}
-
-function getAccessToken() {
-  if (typeof window === "undefined") {
-    return "";
-  }
-
-  return window.localStorage.getItem("accessToken") || "";
 }
 
 async function request<T>(path: string, init: RequestInit, isFormData = false): Promise<T> {

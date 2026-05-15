@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "./ui/select";
 import { checkUsername, sendEmailVerification, signup, verifyEmail } from "../lib/authApi";
+import { storeAuthSession } from "../lib/authStorage";
 
 const currentYear = new Date().getFullYear();
 const years = Array.from({ length: 100 }, (_, index) => currentYear - index);
@@ -199,8 +200,7 @@ export function Signup() {
         birthDate,
       });
 
-      localStorage.setItem("accessToken", result.accessToken);
-      localStorage.setItem("currentUser", JSON.stringify(result.user));
+      storeAuthSession(result.accessToken, result.user);
       navigate("/main");
     } catch (signupError) {
       setError(signupError instanceof Error ? signupError.message : "회원가입에 실패했습니다.");

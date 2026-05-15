@@ -43,8 +43,6 @@ export type AuthTokenResponse = {
 
 export type AuthMessageResponse = {
   message: string;
-  resetLink?: string | null;
-  verificationCode?: string | null;
 };
 
 export function signup(payload: {

@@ -1,18 +1,11 @@
 import { useEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router";
-
-function isLoggedIn() {
-  if (typeof window === "undefined") {
-    return false;
-  }
-
-  return Boolean(window.localStorage.getItem("accessToken"));
-}
+import { hasAccessToken } from "../lib/authStorage";
 
 export function AuthGuard() {
   const location = useLocation();
   const navigate = useNavigate();
-  const authenticated = isLoggedIn();
+  const authenticated = hasAccessToken();
 
   useEffect(() => {
     if (authenticated) {

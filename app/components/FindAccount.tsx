@@ -112,10 +112,7 @@ function FindPasswordCard() {
         email: email.trim(),
       });
 
-      const debugMessage = response.resetLink
-        ? `${response.message} 개발용 링크: ${response.resetLink}`
-        : response.message;
-      setResult(debugMessage);
+      setResult(response.message);
     } catch (resetError) {
       setError(resetError instanceof Error ? resetError.message : "비밀번호 재설정 요청에 실패했습니다.");
     } finally {
